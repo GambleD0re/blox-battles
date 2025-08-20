@@ -3,15 +3,13 @@ const { query } = require('../config/database');
 
 class DuelRepository {
   /**
-   * Creates a new duel record in the database.
+   * Creates a new duel record in the database using the Core + Properties model.
    * @param {object} duelData - The data for the new duel.
    * @param {string} duelData.challengerId - The challenger's user ID (UUID).
    * @param {string} duelData.opponentId - The opponent's user ID (UUID).
    * @param {number} duelData.gameId - The ID of the game being played.
    * @param {number} duelData.wager - The amount of gems wagered.
-   * @param {string} duelData.map - The selected map.
-   * @param {Array<string>} duelData.bannedWeapons - A list of banned weapons.
-   * @param {string} duelData.region - The selected server region.
+   * @param {object} duelData.matchParameters - A JSON object with game-specific settings.
    * @returns {Promise<object>} The newly created duel object.
    */
   static async create(duelData) {
@@ -20,16 +18,14 @@ class DuelRepository {
       opponentId,
       gameId,
       wager,
-      map,
-      bannedWeapons,
-      region
+      matchParameters
     } = duelData;
 
     const text = `
       INSERT INTO duels 
-        (challenger_id, opponent_id, game_id, wager, map, banned_weapons, region, status)
+        (challenger_id, opponent_id, game_id, wager, match_parameters, status)
       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, 'pending')
+        ($1, $2, $3, $4, $5, 'pending')
       RETURNING *;
     `;
 
@@ -38,9 +34,7 @@ class DuelRepository {
       opponentId,
       gameId,
       wager,
-      map,
-      JSON.stringify(bannedWeapons || []),
-      region
+      JSON.stringify(matchParameters || {}),
     ];
 
     const { rows } = await query(text, values);
