@@ -1,10 +1,13 @@
 // /backend/server.js
+// This MUST be the first line of code to register the module alias
+require('module-alias/register');
+
 require('dotenv').config();
 
 const http = require('http');
-const app = require('./src/app');
-const logger = require('./src/utils/logger');
-const { pool } = require('./src/config/database');
+const app = require('@/app');
+const logger = require('@/utils/logger');
+const { pool } = require('@/config/database');
 
 const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
@@ -17,7 +20,7 @@ const startServer = async () => {
     client.release();
 
     server.listen(PORT, () => {
-      logger.info(`CyberDome Backend Server started. Listening on port ${PORT}`);
+      logger.info(`Blox Battles Backend Server started. Listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
