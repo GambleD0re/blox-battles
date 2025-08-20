@@ -1,7 +1,7 @@
 // /backend/src/api/v1/index.js
 const express = require('express');
+const authRoutes = require('./routes/auth.routes');
 // Import future routers here as they are created
-// const authRoutes = require('./routes/auth.routes');
 // const userRoutes = require('./routes/user.routes');
 
 const router = express.Router();
@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
 });
 
 // Mount future feature-specific routers here
-// router.use('/auth', authRoutes);
+router.use('/auth', authRoutes);
 // router.use('/users', userRoutes);
 
 
