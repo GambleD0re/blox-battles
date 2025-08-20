@@ -1,8 +1,8 @@
 // /backend/src/api/v1/index.js
 const express = require('express');
 const authRoutes = require('./routes/auth.routes');
-// Import future routers here as they are created
-// const userRoutes = require('./routes/user.routes');
+const userRoutes = require('./routes/user.routes');
+const gameRoutes = require('./routes/game.routes');
 
 const router = express.Router();
 
@@ -17,9 +17,10 @@ router.get('/', (req, res) => {
   });
 });
 
-// Mount future feature-specific routers here
+// Mount feature-specific routers
 router.use('/auth', authRoutes);
-// router.use('/users', userRoutes);
+router.use('/users', userRoutes);
+router.use('/games', gameRoutes);
 
 
 module.exports = router;
