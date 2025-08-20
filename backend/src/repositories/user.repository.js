@@ -3,11 +3,6 @@ const { query } = require('../config/database');
 const crypto = require('crypto');
 
 class UserRepository {
-  /**
-   * Finds a user by their unique ID.
-   * @param {string} id - The UUID of the user.
-   * @returns {Promise<object|null>} The user object or null if not found.
-   */
   static async findById(id) {
     const text = 'SELECT * FROM users WHERE id = $1';
     const values = [id];
@@ -15,11 +10,6 @@ class UserRepository {
     return rows[0] || null;
   }
 
-  /**
-   * Finds a user by their email address.
-   * @param {string} email - The email of the user.
-   * @returns {Promise<object|null>} The user object or null if not found.
-   */
   static async findByEmail(email) {
     const text = 'SELECT * FROM users WHERE email = $1';
     const values = [email];
@@ -27,13 +17,6 @@ class UserRepository {
     return rows[0] || null;
   }
 
-  /**
-   * Creates a new user in the database.
-   * @param {object} userData - The user data.
-   * @param {string} userData.email - The user's email.
-   * @param {string} userData.passwordHash - The hashed password.
-   * @returns {Promise<object>} The newly created user object.
-   */
   static async create({ email, passwordHash }) {
     const id = crypto.randomUUID();
     const text = `
@@ -42,6 +25,67 @@ class UserRepository {
       RETURNING *
     `;
     const values = [id, email, passwordHash, false];
+    const { rows } = await query(text, values);
+    return rows[0];
+  }
+
+  /**
+   * Searches and filters users for the admin panel.
+   * @param {object} filters - The search and filter criteria.
+   * @param {string} [filters.query] - A search query for email or username.
+   * @param {string} [filters.status] - A specific status to filter by.
+   * @param {number} [limit=50] - The maximum number of users to return.
+   * @returns {Promise<Array<object>>} A list of matching users.
+   */
+  static async searchAndFilter({ query: searchQuery, status }, limit = 50) {
+    let text = `
+      SELECT id, email, linked_roblox_username, gems, wins, losses, is_admin, status, 
+             ban_applied_at, ban_expires_at, ban_reason, created_at
+      FROM users
+    `;
+    const values = [];
+    const conditions = [];
+    
+    if (searchQuery) {
+      values.push(`%${searchQuery}%`);
+      conditions.push(`(email ILIKE $${values.length} OR linked_roblox_username ILIKE $${values.length})`);
+    }
+    if (status) {
+      values.push(status);
+      conditions.push(`status = $${values.length}`);
+    }
+
+    if (conditions.length > 0) {
+      text += ` WHERE ` + conditions.join(' AND ');
+    }
+
+    text += ` ORDER BY created_at DESC LIMIT $${values.length + 1}`;
+    values.push(limit);
+
+    const { rows } = await query(text, values);
+    return rows;
+  }
+
+  /**
+   * Updates a user's status and ban information.
+   * @param {string} id - The UUID of the user to update.
+   * @param {object} banDetails - The details of the ban.
+   * @param {string} banDetails.status - The new status ('banned' or 'active').
+   * @param {string|null} [banDetails.reason] - The reason for the ban.
+   * @param {string|null} [banDetails.expiresAt] - The ISO timestamp for when the ban expires.
+   * @returns {Promise<object>} The updated user.
+   */
+  static async updateStatus(id, { status, reason, expiresAt }) {
+    const text = `
+      UPDATE users SET 
+        status = $1, 
+        ban_reason = $2, 
+        ban_expires_at = $3, 
+        ban_applied_at = CASE WHEN $1 = 'banned' THEN NOW() ELSE NULL END
+      WHERE id = $4
+      RETURNING *;
+    `;
+    const values = [status, reason, expiresAt, id];
     const { rows } = await query(text, values);
     return rows[0];
   }
