@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const mainApiRouter = require('./api');
+const config = require('./config');
 
 const app = express();
 
@@ -10,7 +11,7 @@ const app = express();
 app.use(helmet());
 
 const corsOptions = {
-  origin: process.env.SERVER_URL,
+  origin: config.frontendUrl,
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -25,6 +26,7 @@ app.get('/healthz', (req, res) => {
 });
 
 // --- API Routes ---
+// Mount the main API router which contains all versioned routes
 app.use('/api', mainApiRouter);
 
 
