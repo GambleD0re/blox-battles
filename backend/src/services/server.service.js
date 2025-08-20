@@ -1,8 +1,8 @@
 // /backend/src/services/server.service.js
-const ServerRepository = require('../repositories/server.repository');
-const config = require('../config');
-const logger = require('../utils/logger');
-const { pool } = require('../config/database');
+const ServerRepository = require('@/repositories/server.repository');
+const config = require('@/config');
+const logger = require('@/utils/logger');
+const { pool } = require('@/config/database');
 
 class ServerService {
   /**
