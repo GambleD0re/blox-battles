@@ -4,6 +4,9 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const gameRoutes = require('./routes/game.routes');
 const platformRoutes = require('./routes/platform.routes');
+const duelRoutes = require('./routes/duel.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const router = express.Router();
 
@@ -23,6 +26,9 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/games', gameRoutes);
 router.use('/platforms', platformRoutes);
+router.use('/duels', duelRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/admin', adminRoutes);
 
 
 module.exports = router;
