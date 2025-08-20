@@ -1,0 +1,36 @@
+// /backend/package.json
+{
+  "name": "@cyberdome/backend",
+  "version": "1.0.0",
+  "description": "The core backend API and service layer for the CyberDome E-Wagers platform.",
+  "main": "server.js",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js | pino-pretty",
+    "db:setup": "bash ./database/setup-database.sh"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.12.0",
+    "pino": "^9.2.0",
+    "sharp": "^0.33.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4",
+    "pino-pretty": "^11.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
