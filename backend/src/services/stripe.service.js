@@ -10,13 +10,12 @@ const stripe = new Stripe(config.stripe.secretKey);
 class StripeService {
   /**
    * Creates a Stripe Checkout Session for a gem purchase.
-   * @param {object} user - The authenticated user object.
+   * @param {object} user - The authenticated user object containing at least a userId.
    * @param {number} amountUSD - The amount in USD the user wants to spend.
    * @returns {Promise<Stripe.Checkout.Session>} The created Stripe session object.
    */
   static async createCheckoutSession(user, amountUSD) {
-    // This value should come from the config service in a future step
-    const USD_TO_GEMS_RATE = 100;
+    const USD_TO_GEMS_RATE = 100; // This should come from config service later
     const MINIMUM_USD_DEPOSIT = 4.00;
 
     if (amountUSD < MINIMUM_USD_DEPOSIT) {
@@ -44,6 +43,7 @@ class StripeService {
           quantity: 1,
         }],
         mode: 'payment',
+        customer_email: user.email,
         metadata: {
           userId: user.userId,
           gemAmount: gemAmount,
@@ -55,6 +55,24 @@ class StripeService {
     } catch (error) {
       logger.error({ err: error }, 'Failed to create Stripe Checkout session.');
       throw new Error('Could not create payment session.');
+    }
+  }
+
+  /**
+   * Constructs and verifies a Stripe webhook event from a raw request.
+   * @param {Buffer} body - The raw request body from Stripe.
+   * @param {string} signature - The value of the 'stripe-signature' header.
+   * @returns {Stripe.Event} The verified Stripe event object.
+   */
+  static constructWebhookEvent(body, signature) {
+    try {
+      return stripe.webhooks.constructEvent(body, signature, config.stripe.webhookSecret);
+    } catch (err) {
+      logger.error({ err }, 'Stripe webhook signature verification failed.');
+      const error = new Error(`Webhook Error: ${err.message}`);
+      error.statusCode = 400;
+      error.code = 'STRIPE_WEBHOOK_VALIDATION_FAILED';
+      throw error;
     }
   }
 
@@ -79,21 +97,35 @@ class StripeService {
       throw new Error('Invalid metadata in Stripe session.');
     }
 
-    await WalletService.credit(userId, gemAmountInt, {
+    const purchaseData = {
+      userId,
+      stripeSessionId: sessionId,
+      gemAmount: gemAmountInt,
+      amountPaid: session.amount_total,
+      currency: session.currency,
+    };
+    
+    const transactionDetails = {
       type: 'deposit_stripe',
       description: `${gemAmountInt.toLocaleString()} Gems purchased via Card`,
       referenceId: sessionId,
-    });
-    
-    await DepositRepository.createStripePurchase({
-        userId,
-        stripeSessionId: sessionId,
-        gemAmount: gemAmountInt,
-        amountPaid: session.amount_total,
-        currency: session.currency
-    });
+    };
 
-    logger.info({ userId, gemAmount, sessionId }, 'Successfully processed Stripe payment and credited gems.');
+    // Use a transaction to credit gems and record the purchase atomically
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await WalletService.credit(userId, gemAmountInt, transactionDetails, client);
+      await DepositRepository.createStripePurchase(purchaseData, client);
+      await client.query('COMMIT');
+      logger.info({ userId, gemAmount, sessionId }, 'Successfully processed Stripe payment and credited gems.');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error({ err: error, sessionId }, 'Transaction failed during Stripe webhook processing. Rolled back.');
+      throw error; // Re-throw to signal failure to the webhook handler
+    } finally {
+      client.release();
+    }
   }
 }
 
