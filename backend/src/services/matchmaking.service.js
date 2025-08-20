@@ -1,9 +1,9 @@
 // /backend/src/services/matchmaking.service.js
-const QueueRepository = require('../repositories/queue.repository');
-const DuelRepository = require('../repositories/duel.repository');
-const UserRepository = require('../repositories/user.repository');
-const ServerService = require('./server.service');
-const logger = require('../utils/logger');
+const QueueRepository = require('@/repositories/queue.repository');
+const DuelRepository = require('@/repositories/duel.repository');
+const UserRepository = require('@/repositories/user.repository');
+const ServerService = require('@/services/server.service');
+const logger = require('@/utils/logger');
 // const TaskService = require('./task.service'); // To be created
 // const GameService = require('./game.service'); // To be used later
 
