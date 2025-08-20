@@ -31,28 +31,3 @@ services:
         value: https://blox-battles-frontend.onrender.com
       - key: BACKEND_URL # This service's own public URL
         value: https://blox-battles-backend.onrender.com
-      - fromSecretFile:
-          name: .env # The name you gave the secret file in the Render UI
-          path: ./backend/.env # The path where the file will be available in your build
-
-  # ---------------------
-  # 2. The Frontend Static Site (React/Vite)
-  # ---------------------
-  - type: web
-    name: blox-battles-frontend
-    # (Frontend configuration will be added in a future step)
-
-  # ---------------------
-  # 3. The Cron Job Runner
-  # ---------------------
-  - type: cron
-    name: blox-battles-cron
-    # (Cron job configuration will be added in a future step)
-
-workers:
-  # ---------------------
-  # 4. The Discord Bot Worker
-  # ---------------------
-  - type: worker
-    name: blox-battles-discord-bot
-    # (Discord bot configuration will be added in a future step)
