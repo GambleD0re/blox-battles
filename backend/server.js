@@ -1,6 +1,9 @@
 // /backend/server.js
-// This MUST be the first line of code to register the module alias
-require('module-alias/register');
+// Initialize module-alias with a more robust, explicit path.
+const path = require('path');
+require('module-alias')({
+  base: path.join(__dirname)
+});
 
 require('dotenv').config();
 
