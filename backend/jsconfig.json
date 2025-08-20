@@ -1,0 +1,13 @@
+// /backend/jsconfig.json
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "baseUrl": "src",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "checkJs": true
+  },
+  "exclude": ["node_modules"]
+}
