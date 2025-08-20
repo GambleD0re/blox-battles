@@ -1,0 +1,183 @@
+# /render.yaml
+# This file defines the infrastructure for the CyberDome E-Wagers platform on Render.
+# It specifies the database, three services (backend, frontend, cron), and one worker (Discord bot).
+
+databases:
+  - name: cyberdome-db
+    plan: starter # Start with a basic plan, can be scaled up as needed.
+    region: oregon
+
+services:
+  # ---------------------
+  # 1. The Backend API Service (Node.js/Express)
+  # ---------------------
+  - type: web
+    name: cd-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: ./backend
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cyberdome-db
+          property: connectionString
+      - key: SERVER_URL # The public URL of the frontend
+        value: https://cd-frontend.onrender.com
+      - key: BACKEND_URL # This service's own public URL
+        value: https://cd-backend.onrender.com
+      - fromGroup: cyberdome-secrets # Group for all sensitive keys
+
+  # ---------------------
+  # 2. The Frontend Static Site (React/Vite)
+  # ---------------------
+  - type: web
+    name: cd-frontend
+    runtime: static
+    region: oregon
+    rootDir: ./frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    routes:
+      # Proxy all API requests to the backend to avoid CORS issues.
+      - type: rewrite
+        source: /api/:path*
+        destination: https://cd-backend.onrender.com/api/:path*
+      # Handle client-side routing by redirecting all other requests to the main HTML file.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - fromGroup: cyberdome-secrets
+
+  # ---------------------
+  # 3. The Cron Job Runner
+  # ---------------------
+  - type: cron
+    name: cd-cron
+    runtime: node
+    region: oregon
+    rootDir: ./backend
+    buildCommand: "npm install"
+    # Runs every minute.
+    schedule: "*/1 * * * *"
+    startCommand: "node cron-tasks.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cyberdome-db
+          property: connectionString
+      - fromGroup: cyberdome-secrets
+
+workers:
+  # ---------------------
+  # 4. The Discord Bot Worker
+  # ---------------------
+  - type: worker
+    name: cd-discord-bot
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: ./discord-bot
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_API_URL
+        value: https://cd-backend.onrender.com
+      - key: FRONTEND_URL
+        value: https://cd-frontend.onrender.com
+      - fromGroup: cyberdome-secrets
+
+# --- Environment Variable Groups ---
+# This is the recommended way to manage secrets in Render.
+# You define the group once and attach it to all relevant services.
+envVarGroups:
+  - name: cyberdome-secrets
+    envVars:
+      # --- Brand Identity ---
+      - key: BRAND_NAME_FULL
+        value: "CyberDome E-Wagers"
+      - key: BRAND_NAME_SHORT
+        value: "The CyberDome"
+      # --- Security & Auth ---
+      - key: JWT_SECRET
+        sync: false # sync: false prevents values from being exposed in Render's UI after initial set
+      - key: BOT_API_KEY
+        sync: false
+      # --- Third Party Services ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      # --- Blockchain & Wallet ---
+      - key: ALCHEMY_API_KEY
+        sync: false
+      - key: ALCHEMY_POLYGON_URL
+        sync: false
+      - key: ALCHEMY_ETHEREUM_URL
+        sync: false
+      - key: MASTER_XPUB
+        sync: false
+      - key: PAYOUT_WALLET_PRIVATE_KEY
+        sync: false
+      # --- Email Service ---
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # --- Discord Integration ---
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: DISCORD_ADMIN_ROLE_ID
+        sync: false
+      - key: DISCORD_MASTER_ADMIN_ROLE_ID
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DUEL_RESULTS_CHANNEL_ID
+        sync: false
+      - key: DUELER_ROLE_ID
+        sync: false
+      - key: NA_EAST_VC_ID
+        sync: false
+      - key: NA_WEST_VC_ID
+        sync: false
+      - key: EUROPE_VC_ID
+        sync: false
+      - key: OCE_VC_ID
+        sync: false
+      - key: MEMBERS_VC_ID
+        sync: false
+      - key: PLAYERS_VC_ID
+        sync: false
+      - key: SUPPORT_STAFF_ROLE_ID
+        sync: false
+      - key: SUPPORT_TICKETS_CATEGORY_ID
+        sync: false
+      - key: BAN_APPEALS_CATEGORY_ID
+        sync: false
+      - key: DUEL_DISPUTES_CATEGORY_ID
+        sync: false
