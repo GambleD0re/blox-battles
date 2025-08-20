@@ -1,9 +1,9 @@
 // /backend/src/controllers/duel.controller.js
-const DuelService = require('../services/duel.service');
-const ServerService = require('../services/server.service');
-const MatchmakingService = require('../services/matchmaking.service');
-const QueueRepository = require('../repositories/queue.repository');
-const DuelRepository = require('../repositories/duel.repository');
+const DuelService = require('@/services/duel.service');
+const ServerService = require('@/services/server.service');
+const MatchmakingService = require('@/services/matchmaking.service');
+const QueueRepository = require('@/repositories/queue.repository');
+const DuelRepository = require('@/repositories/duel.repository');
 
 class DuelController {
   static async createChallenge(req, res, next) {
