@@ -1,81 +1,64 @@
-// /backend/src/services/task.service.js
-const TaskRepository = require('../repositories/task.repository');
-const { pool } = require('../config/database');
-const logger = require('../utils/logger');
+// /backend/src/repositories/task.repository.js
+const { query } = require('../config/database');
 
-class TaskService {
+class TaskRepository {
   /**
-   * Queues a new background task.
-   * @param {string} type - The task type.
-   * @param {object} payload - The data required for the task.
-   * @returns {Promise<object>} The created task object.
+   * Creates a new task in the database.
+   * @param {string} type - The type of the task (e.g., 'REFEREE_DUEL').
+   * @param {object} payload - The JSON data associated with the task.
+   * @param {object} [client=query] - Optional database client for transactions.
+   * @returns {Promise<object>} The newly created task.
    */
-  static async queueTask(type, payload) {
-    try {
-      const task = await TaskRepository.create(type, payload);
-      logger.info({ taskId: task.id, taskType: type }, 'Successfully queued new task.');
-      return task;
-    } catch (error) {
-      logger.error({ err: error, taskType: type, payload }, 'Failed to queue task.');
-      // Depending on criticality, you might want to re-throw or handle differently
-      throw new Error('Could not queue the requested task.');
-    }
+  static async create(type, payload, client = query) {
+    const text = `
+      INSERT INTO tasks (task_type, payload, status)
+      VALUES ($1, $2, 'pending')
+      RETURNING *;
+    `;
+    const values = [type, JSON.stringify(payload || {})];
+    const { rows } = await client.query(text, values);
+    return rows[0];
   }
 
   /**
-   * Fetches a batch of pending tasks and marks them as 'processing'.
-   * This is a transactional operation to ensure atomicity.
-   * @param {Array<string>} types - The types of tasks this worker can handle.
-   * @param {number} [limit=10] - The max number of tasks to fetch.
-   * @returns {Promise<Array<object>>} A list of tasks to be processed.
+   * Fetches a batch of pending tasks of specific types, locking them for processing.
+   * This prevents multiple workers from grabbing the same tasks.
+   * @param {Array<string>} types - An array of task types to fetch.
+   * @param {number} limit - The maximum number of tasks to fetch.
+   * @param {object} client - An active pg client for transactional integrity.
+   * @returns {Promise<Array<object>>} A list of pending tasks.
    */
-  static async fetchTasksForWorker(types, limit = 10) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const tasks = await TaskRepository.fetchAndLockPending(types, limit, client);
-      if (tasks.length > 0) {
-        const taskIds = tasks.map(t => t.id);
-        await TaskRepository.updateStatusForIds(taskIds, 'processing', client);
-      }
-      await client.query('COMMIT');
-      return tasks;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error({ err: error, workerTypes: types }, 'Failed to fetch tasks for worker.');
-      return []; // Return empty on error to prevent worker crash
-    } finally {
-      client.release();
-    }
+  static async fetchAndLockPending(types, limit, client) {
+    const text = `
+      SELECT id, task_type, payload, status, created_at
+      FROM tasks
+      WHERE status = 'pending' AND task_type = ANY($1::varchar[])
+      ORDER BY created_at ASC
+      LIMIT $2
+      FOR UPDATE SKIP LOCKED;
+    `;
+    const values = [types, limit];
+    const { rows } = await client.query(text, values);
+    return rows;
   }
 
   /**
-   * Marks a single task as completed.
-   * @param {number} taskId - The ID of the task.
+   * Updates the status of a batch of tasks.
+   * @param {Array<number>} ids - An array of task IDs to update.
+   * @param {string} status - The new status (e.g., 'processing', 'completed', 'failed').
+   * @param {object} client - An active pg client for transactional integrity.
+   * @returns {Promise<void>}
    */
-  static async completeTask(taskId) {
-    const client = await pool.connect();
-    try {
-      await TaskRepository.updateStatusForIds([taskId], 'completed', client);
-      logger.debug({ taskId }, 'Task marked as completed.');
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
-   * Marks a single task as failed.
-   * @param {number} taskId - The ID of the task.
-   */
-  static async failTask(taskId) {
-    const client = await pool.connect();
-    try {
-      await TaskRepository.updateStatusForIds([taskId], 'failed', client);
-      logger.warn({ taskId }, 'Task marked as failed.');
-    } finally {
-      client.release();
-    }
+  static async updateStatusForIds(ids, status, client) {
+    if (ids.length === 0) return;
+    const text = `
+      UPDATE tasks
+      SET status = $1, completed_at = CASE WHEN $1 IN ('completed', 'failed') THEN NOW() ELSE completed_at END
+      WHERE id = ANY($2::int[]);
+    `;
+    const values = [status, ids];
+    await client.query(text, values);
   }
 }
 
-module.exports = TaskService;
+module.exports = TaskRepository;
