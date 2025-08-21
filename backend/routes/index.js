@@ -1,5 +1,6 @@
 // backend/routes/index.js
 const express = require('express');
+const db = require('../database/database'); // [FIX] Import the database module
 const authRoutes = require('../core/routes/auth.js');
 const userRoutes = require('../core/routes/users.js');
 const paymentsRoutes = require('../core/routes/payments.js');
@@ -31,12 +32,17 @@ router.use('/tickets', ticketRoutes);
 router.use('/transcripts', transcriptRoutes);
 router.use('/duel-history', duelHistoryRoutes);
 
+// This new route will serve the list of games for the main dashboard
 router.get('/games', (req, res) => {
     db.query('SELECT id, name, description, icon_url FROM games WHERE is_active = TRUE')
       .then(result => res.json(result.rows))
-      .catch(err => res.status(500).json({ message: 'Failed to fetch games.' }));
+      .catch(err => {
+          console.error("Fetch Games Error:", err);
+          res.status(500).json({ message: 'Failed to fetch games.' });
+      });
 });
 
+// Main user data route (must be below others to avoid conflicts)
 router.use('/', userRoutes); 
 
 // Game-specific routes, properly namespaced
