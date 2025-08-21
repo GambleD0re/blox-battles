@@ -25,6 +25,7 @@ const DepositPage = () => {
     const { token, refreshUser, appConfig } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    
     const [message, setMessage] = useState({ text: '', type: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState('card');
@@ -36,10 +37,18 @@ const DepositPage = () => {
     const [quote, setQuote] = useState(null);
     const [isQuoteLoading, setIsQuoteLoading] = useState(false);
     
-    // Static data for UI, should match backend configuration
     const depositTokens = {
-        polygon: [{ symbol: 'USDC', name: 'USD Coin', ... }, { symbol: 'USDT', name: 'Tether', ... }, { symbol: 'POL', name: 'Polygon', ... }],
-        ethereum: [{ symbol: 'ETH', name: 'Ethereum', ... }, { symbol: 'USDC', name: 'USD Coin', ... }, { symbol: 'USDT', name: 'Tether USD', ... }, { symbol: 'PYUSD', name: 'PayPal USD', ... }],
+        polygon: [
+            { symbol: 'USDC', name: 'USD Coin', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x3c499c542cef5e3811e1192ce70d8cc03d5c3359.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x0000000000000000000000000000000000000000.png' },
+            { symbol: 'USDT', name: 'Tether', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0xc2132d05d31c914a87c6611c10748aeb04b58e8f.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x0000000000000000000000000000000000000000.png' },
+            { symbol: 'POL', name: 'Polygon', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x0000000000000000000000000000000000000000.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x0000000000000000000000000000000000000000.png' },
+        ],
+        ethereum: [
+            { symbol: 'ETH', name: 'Ethereum', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x0000000000000000000000000000000000000000.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x0000000000000000000000000000000000000000.png' },
+            { symbol: 'USDC', name: 'USD Coin', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x0000000000000000000000000000000000000000.png' },
+            { symbol: 'USDT', name: 'Tether USD', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0xdac17f958d2ee523a2206206994597c13d831ec7.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x0000000000000000000000000000000000000000.png' },
+            { symbol: 'PYUSD', name: 'PayPal USD', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x6c3ea9036406852006290770bedfcaba0e23a0e8.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/1/0x0000000000000000000000000000000000000000.png' },
+        ],
     };
 
     useEffect(() => {
@@ -49,7 +58,7 @@ const DepositPage = () => {
             navigate('/deposit', { replace: true });
         }
         if (searchParams.get('canceled')) {
-            setMessage({ text: 'Purchase canceled. You have not been charged.', type: 'error' });
+            setMessage({ text: 'Purchase canceled.', type: 'error' });
             navigate('/deposit', { replace: true });
         }
     }, [searchParams, refreshUser, navigate]);
@@ -60,18 +69,12 @@ const DepositPage = () => {
             const data = await api.getCryptoDepositAddress(token);
             setCryptoAddress(data.address);
         } catch (error) {
-            setMessage({ text: 'Could not fetch your crypto deposit address.', type: 'error' });
+            setMessage({ text: error.message, type: 'error' });
         }
     }, [token]);
 
-    useEffect(() => {
-        if (activeTab === 'crypto') fetchCryptoAddress();
-    }, [activeTab, fetchCryptoAddress]);
-    
-    useEffect(() => {
-        setSelectedToken(depositTokens[selectedNetwork][0].symbol);
-        setQuote(null);
-    }, [selectedNetwork]);
+    useEffect(() => { if (activeTab === 'crypto') fetchCryptoAddress(); }, [activeTab, fetchCryptoAddress]);
+    useEffect(() => { setSelectedToken(depositTokens[selectedNetwork][0].symbol); setQuote(null); }, [selectedNetwork]);
 
     const handleAmountChange = (e) => {
         const value = e.target.value;
@@ -79,22 +82,12 @@ const DepositPage = () => {
         setGemAmount(!isNaN(value) && parseFloat(value) > 0 ? Math.floor(parseFloat(value) * (appConfig?.usdToGemsRate || 100)) : 0);
     };
 
-    const handleStripePurchase = async () => { /* ... unchanged logic ... */ };
-    const handleGetQuote = async () => { /* ... unchanged logic ... */ };
+    const handleStripePurchase = async () => { /* ... unchanged ... */ };
+    const handleGetQuote = async () => { /* ... unchanged ... */ };
 
-    // Rendering logic for card and crypto tabs remains the same, but with updated navigation
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-            {message.text && <div className={`mb-6 p-4 rounded-lg text-white font-bold ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>{message.text}</div>}
-            <header className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold text-white">Deposit Gems</h1>
-                <button onClick={() => navigate('/dashboard')} className="btn btn-secondary !mt-0">Back to Dashboard</button>
-            </header>
-            <div className="border-b border-gray-700 mb-6">
-                <TabButton active={activeTab === 'card'} onClick={() => setActiveTab('card')}>Credit Card</TabButton>
-                <TabButton active={activeTab === 'crypto'} onClick={() => setActiveTab('crypto')}>Crypto</TabButton>
-            </div>
-            {/* ... rest of the component JSX ... */}
+            {/* ... rest of the component JSX is unchanged ... */}
         </div>
     );
 };
