@@ -1,3 +1,4 @@
+# render.yaml
 databases:
   - name: blox-battles-db
     plan: basic-256mb
@@ -14,18 +15,24 @@ services:
     region: oregon
     rootDir: ./backend
     buildCommand: "npm install"
-    preDeployCommand: "./setup-database.sh"
+    preDeployCommand: "./database/setup-database.sh"
     startCommand: "node server.js"
-    healthCheckPath: /healthz
+    healthCheckPath: /api/status/health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: blox-battles-db
           property: connectionString
-      - key: SERVER_URL
-        sync: false
-      - key: BACKEND_URL
-        sync: false
+      - key: SERVER_URL # [MODIFIED] Dynamically gets the frontend URL
+        fromService:
+          type: web
+          name: blox-battles-frontend
+          property: url
+      - key: BACKEND_URL # [MODIFIED] Dynamically gets its own URL
+        fromService:
+          type: web
+          name: blox-battles-backend
+          property: url
       - key: JWT_SECRET
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -111,6 +118,7 @@ services:
     routes:
       - type: rewrite
         source: /api/:path*
+        # [NOTE] This URL must be static, but it's reliable because it's based on your backend service's name.
         destination: https://blox-battles-backend.onrender.com/api/:path*
       - type: rewrite
         source: /*
@@ -118,8 +126,11 @@ services:
     envVars:
       - key: VITE_STRIPE_PUBLISHABLE_KEY
         sync: false
-      - key: VITE_API_BASE_URL
-        sync: false
+      - key: VITE_API_BASE_URL # [MODIFIED] No longer needed, as the rewrite handles it. Kept for local dev consistency if needed.
+        fromService:
+          type: web
+          name: blox-battles-backend
+          property: url
 
   # ---------------------
   # 3. The Cron Job
@@ -137,6 +148,7 @@ services:
         fromDatabase:
           name: blox-battles-db
           property: connectionString
+      # [NOTE] You must still set these secret values in the Render dashboard for the cron job.
       - key: DUEL_EXPIRATION_HOURS
         sync: false
       - key: DUEL_FORFEIT_MINUTES_DIRECT
@@ -160,6 +172,17 @@ services:
     buildCommand: "npm install"
     startCommand: "node bot.js"
     envVars:
+      - key: BACKEND_API_URL # [MODIFIED] Dynamically gets the backend URL
+        fromService:
+          type: web
+          name: blox-battles-backend
+          property: url
+      - key: FRONTEND_URL # [MODIFIED] Dynamically gets the frontend URL
+        fromService:
+          type: web
+          name: blox-battles-frontend
+          property: url
+      # [NOTE] All other bot variables are secrets and must be set in the dashboard.
       - key: DISCORD_BOT_TOKEN
         sync: false
       - key: DISCORD_CLIENT_ID
@@ -167,10 +190,6 @@ services:
       - key: DISCORD_GUILD_ID
         sync: false
       - key: BOT_API_KEY
-        sync: false
-      - key: BACKEND_API_URL
-        sync: false
-      - key: FRONTEND_URL
         sync: false
       - key: DISCORD_INVITE_URL
         sync: false
