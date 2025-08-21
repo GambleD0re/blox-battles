@@ -1,5 +1,5 @@
--- render.yaml.txt
-databases:
+-- render.yaml
+database:
   - name: blox-battles-db
     plan: basic-256mb
     region: oregon
