@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
 
     const fetchAndSetAllData = useCallback(async (tokenToUse) => {
         try {
+            const decoded = jwtDecode(tokenToUse);
             const [statusData, configData, userData] = await Promise.all([
                 api.getFeatureStatus(),
                 api.getAppConfig(),
@@ -31,7 +32,7 @@ export const AuthProvider = ({ children }) => {
             ]);
             setSystemStatus(statusData);
             setAppConfig(configData);
-            setUser(userData);
+            setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: userData.is_username_set });
         } catch (error) {
             console.error("Failed to fetch initial data, logging out.", error);
             logout();
@@ -99,13 +100,10 @@ export const AuthProvider = ({ children }) => {
             if (gameId === 'rivals') {
                 profileData = await api.getRivalsGameProfile(tokenFromStorage);
             }
-            // Future games would have their own case here
-            
             if (profileData) {
                 setGameProfiles(prev => ({ ...prev, [gameId]: profileData }));
             }
         } catch (error) {
-            // A 404 is expected if the profile doesn't exist yet
             if (error.response?.status !== 404) {
                  console.error(`Failed to refresh game profile for ${gameId}:`, error);
             } else {
