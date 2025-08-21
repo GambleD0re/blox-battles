@@ -30,7 +30,6 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     
     const [users, setUsers] = useState([]);
-    const [payoutRequests, setPayoutRequests] = useState([]);
     const [stats, setStats] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -44,13 +43,11 @@ const AdminDashboard = () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            const [usersData, payoutsData, statsData] = await Promise.all([
+            const [usersData, statsData] = await Promise.all([
                 api.getAdminUsers(searchQuery, token, statusFilter),
-                api.getAdminPayoutRequests(token),
                 api.getAdminStats(token),
             ]);
             setUsers(usersData);
-            setPayoutRequests(payoutsData);
             setStats(statsData);
         } catch (error) { showMessage(error.message, 'error'); } 
         finally { setIsLoading(false); }
