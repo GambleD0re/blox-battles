@@ -1,0 +1,203 @@
+-- render.yaml.txt
+databases:
+  - name: blox-battles-db
+    plan: basic-256mb
+    region: oregon
+
+services:
+  # ---------------------
+  # 1. The Backend Web Service (Node.js/Express)
+  # ---------------------
+  - type: web
+    name: blox-battles-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: ./backend
+    buildCommand: "npm install"
+    preDeployCommand: "./setup-database.sh"
+    startCommand: "node server.js"
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blox-battles-db
+          property: connectionString
+      - key: SERVER_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: BOT_API_KEY
+        sync: false
+      - key: ADMIN_TEST_API_KEY
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: DISCORD_ADMIN_ROLE_ID
+        sync: false
+      - key: DISCORD_MASTER_ADMIN_ROLE_ID
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: ALCHEMY_POLYGON_URL
+        sync: false
+      - key: ALCHEMY_ETHEREUM_URL
+        sync: false
+      - key: ALCHEMY_API_KEY
+        sync: false
+      - key: MASTER_XPUB
+        sync: false
+      - key: PAYOUT_WALLET_PRIVATE_KEY
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: TAX_RATE_DIRECT
+        sync: false
+      - key: TAX_RATE_RANDOM
+        sync: false
+      - key: USD_TO_GEMS_RATE
+        sync: false
+      - key: GEM_TO_USD_CONVERSION_RATE
+        sync: false
+      - key: MINIMUM_USD_DEPOSIT
+        sync: false
+      - key: MINIMUM_GEM_WITHDRAWAL
+        sync: false
+      - key: QUEUE_WAGERS
+        sync: false
+      - key: DUEL_EXPIRATION_HOURS
+        sync: false
+      - key: DUEL_FORFEIT_MINUTES_DIRECT
+        sync: false
+      - key: DUEL_FORFEIT_MINUTES_RANDOM
+        sync: false
+      - key: RESULT_CONFIRMATION_MINUTES
+        sync: false
+      - key: SERVER_CRASH_THRESHOLD_SECONDS
+        sync: false
+      - key: QUEUE_LEAVE_COOLDOWN_SECONDS
+        sync: false
+      - key: MATCHMAKING_INTERVAL_SECONDS
+        sync: false
+      - key: DISCORD_INVITE_URL
+        sync: false
+
+  # ---------------------
+  # 2. The Frontend Static Site (React/Vite)
+  # ---------------------
+  - type: web
+    name: blox-battles-frontend
+    runtime: static
+    rootDir: ./frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /api/:path*
+        destination: https://blox-battles-backend.onrender.com/api/:path*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_API_BASE_URL
+        sync: false
+
+  # ---------------------
+  # 3. The Cron Job
+  # ---------------------
+  - type: cron
+    name: blox-battles-cron
+    runtime: node
+    region: oregon
+    rootDir: ./backend
+    buildCommand: "npm install"
+    schedule: "*/1 * * * *"
+    startCommand: "node cron-tasks.js"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blox-battles-db
+          property: connectionString
+      - key: DUEL_EXPIRATION_HOURS
+        sync: false
+      - key: DUEL_FORFEIT_MINUTES_DIRECT
+        sync: false
+      - key: DUEL_FORFEIT_MINUTES_RANDOM
+        sync: false
+      - key: RESULT_CONFIRMATION_MINUTES
+        sync: false
+      - key: SERVER_CRASH_THRESHOLD_SECONDS
+        sync: false
+          
+  # ---------------------
+  # 4. The Discord Bot Worker
+  # ---------------------
+  - type: worker
+    name: blox-battles-discord-bot
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: ./discord-bot
+    buildCommand: "npm install"
+    startCommand: "node bot.js"
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: BOT_API_KEY
+        sync: false
+      - key: BACKEND_API_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DISCORD_INVITE_URL
+        sync: false
+      - key: UPDATE_INTERVAL_SECONDS
+        sync: false
+      - key: DUEL_RESULTS_CHANNEL_ID
+        sync: false
+      - key: DUELER_ROLE_ID
+        sync: false
+      - key: NA_EAST_VC_ID
+        sync: false
+      - key: NA_WEST_VC_ID
+        sync: false
+      - key: EUROPE_VC_ID
+        sync: false
+      - key: OCE_VC_ID
+        sync: false
+      - key: MEMBERS_VC_ID
+        sync: false
+      - key: PLAYERS_VC_ID
+        sync: false
+      - key: SUPPORT_STAFF_ROLE_ID
+        sync: false
+      - key: SUPPORT_TICKETS_CATEGORY_ID
+        sync: false
+      - key: BAN_APPEALS_CATEGORY_ID
+        sync: false
+      - key: DUEL_DISPUTES_CATEGORY_ID
+        sync: false
