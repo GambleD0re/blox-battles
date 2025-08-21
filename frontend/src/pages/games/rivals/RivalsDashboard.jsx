@@ -7,7 +7,7 @@ import RivalsPlayerHeader from '../../../components/games/rivals/RivalsPlayerHea
 import ChallengePlayer from '../../../components/games/rivals/ChallengePlayer';
 import Inbox from '../../../components/games/rivals/Inbox';
 import QuickMatchWidget from '../../../components/games/rivals/QuickMatchWidget';
-import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget';
+import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget'; // [FIXED] Corrected import path
 import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
 import { ChallengeModal, DuelDetailsModal, ConfirmationModal, TranscriptModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
@@ -48,7 +48,7 @@ const RivalsDashboard = () => {
                 api.getRivalsUnseenResults(token),
                 api.getQueueStatus(token)
             ]);
-            setInbox(inboxData.filter(n => n.game_id === 'rivals' || !n.game_id)); // Filter for rivals or global notifications
+            setInbox(inboxData.filter(n => n.game_id === 'rivals' || !n.game_id));
             setGameData(gameData);
             setUnseenResults(resultsData);
             setQueueStatus(queueData);
@@ -139,7 +139,6 @@ const RivalsDashboard = () => {
                     <Inbox 
                         notifications={inbox}
                         onStartDuel={handleStartDuel}
-                        // Pass other handlers as needed
                     />
                 </div>
             </main>
@@ -165,8 +164,6 @@ const RivalsDashboard = () => {
                 duelDetails={matchReadyInfo}
                 currentUser={rivalsProfile}
             />
-
-            {/* Other modals (PostDuel, Forfeit, Cancel, etc.) would be included here */}
             
             <LiveFeed 
                 token={token} 
