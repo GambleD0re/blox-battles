@@ -84,7 +84,10 @@ export const getTranscript = (duelId, token) => apiRequest(`/transcripts/${duelI
 
 // --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
-export const getAdminUsers = (searchQuery, token, status) => { /* ... */ };
+export const getAdminUsers = (searchQuery, status, token) => {
+    const params = new URLSearchParams({ search: searchQuery, status });
+    return apiRequest(`/admin/users?${params.toString()}`, 'GET', null, token);
+};
 export const updateUserGems = (userId, amount, token) => apiRequest(`/admin/users/${userId}/gems`, 'POST', { amount }, token);
 export const banUser = (userId, reason, duration_hours, token) => apiRequest(`/admin/users/${userId}/ban`, 'POST', { reason, duration_hours }, token);
 export const unbanUser = (userId, token) => apiRequest(`/admin/users/${userId}/ban`, 'DELETE', null, token);
