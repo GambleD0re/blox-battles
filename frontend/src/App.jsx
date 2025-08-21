@@ -45,11 +45,19 @@ const ProtectedRoute = ({ children, requireGameProfile = null }) => {
     const { user, gameProfiles } = useAuth();
     const location = useLocation();
 
-    if (!user) return <Navigate to="/signin" state={{ from: location }} replace />;
-    if (!user.is_email_verified) return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
+    if (!user) {
+        return <Navigate to="/signin" state={{ from: location }} replace />;
+    }
+
+    // [FIX] This check now correctly ignores Google users and only applies to unverified email/password accounts.
+    if (!user.google_id && !user.is_email_verified) {
+        return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
+    }
+    
     if (requireGameProfile && !gameProfiles?.[requireGameProfile]?.linked_game_username) {
         return <Navigate to={`/games/${requireGameProfile}/link`} replace />;
     }
+
     return children;
 };
 
