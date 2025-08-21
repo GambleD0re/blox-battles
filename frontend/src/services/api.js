@@ -79,15 +79,18 @@ export const startRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/d
 export const forfeitRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/forfeit`, 'POST', null, token);
 export const getRivalsUnseenResults = (token) => apiRequest(`${RIVALS_PREFIX}/duels/unseen-results`, 'GET', null, token);
 export const confirmRivalsDuelResult = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/confirm-result`, 'POST', null, token);
-export const getRivalsDuelHistory = (token) => apiRequest(`${RIVALS_PREFIX}/duels/history`, 'GET', null, token);
+export const getRivalsDuelHistory = (token) => apiRequest(`${RIVALS_PREFIX}/duels/history`, 'GET', null, token); // [DEPRECATED-STYLE]
+export const getQueueStatus = (token) => apiRequest(`${RIVALS_PREFIX}/queue/status`, 'GET', null, token);
+export const joinQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX}/queue/join`, 'POST', queueData, token);
+export const leaveQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
 
 // --- Generic/Shared Routes ---
+export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token); // [FIX] Exporting the correct global function
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
 export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
 export const getTranscript = (duelId, token) => apiRequest(`/transcripts/${duelId}`, 'GET', null, token);
 
 // --- Admin Routes ---
-// (Admin routes remain largely the same, but game-specific ones will be added later)
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
 export const getAdminUsers = (searchQuery, token, status) => {
     const params = new URLSearchParams();
@@ -104,3 +107,4 @@ export const approvePayoutRequest = (requestId, token) => apiRequest(`/payouts/r
 export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/payouts/requests/${requestId}/decline`, 'POST', { reason }, token);
 export const getSystemStatus = (token) => apiRequest('/admin/system-status', 'GET', null, token);
 export const updateSystemStatus = (statusData, token) => apiRequest('/admin/system-status', 'PUT', statusData, token);
+export const createRivalsTournament = (tournamentData, token) => apiRequest('/admin/games/rivals/tournaments', 'POST', tournamentData, token);
