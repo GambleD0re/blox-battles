@@ -1,4 +1,4 @@
--- backend/database/schema.sql.txt
+-- backend/database/schema.sql
 -- This script defines the PostgreSQL-compatible structure of the database.
 
 -- Drop tables if they exist to ensure a clean slate. The CASCADE keyword will also drop dependent objects.
@@ -11,7 +11,7 @@ CREATE TABLE system_status (
     disabled_message TEXT
 );
 
--- NEW: Table to define the games available on the platform.
+-- Table to define the games available on the platform.
 CREATE TABLE games (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE games (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- Create the 'users' table (SIMPLIFIED for core Blox Battles profiles).
+-- Create the 'users' table with the new is_username_set flag.
 CREATE TABLE users (
     user_index SERIAL PRIMARY KEY,
     id UUID NOT NULL UNIQUE,
@@ -33,6 +33,7 @@ CREATE TABLE users (
     gems BIGINT DEFAULT 0,
     is_admin BOOLEAN DEFAULT FALSE,
     avatar_url TEXT,
+    is_username_set BOOLEAN DEFAULT TRUE NOT NULL, -- New column for Google sign-up flow
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     password_last_updated TIMESTAMP WITH TIME ZONE,
     discord_notifications_enabled BOOLEAN DEFAULT TRUE,
@@ -49,7 +50,7 @@ CREATE TABLE users (
     last_queue_leave_at TIMESTAMP WITH TIME ZONE
 );
 
--- NEW: Table linking users to games and storing their game-specific profiles and stats.
+-- Table linking users to games and storing their game-specific profiles and stats.
 CREATE TABLE user_game_profiles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     game_id VARCHAR(50) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -57,6 +58,7 @@ CREATE TABLE user_game_profiles (
     linked_game_id VARCHAR(255),
     wins INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,
+    avatar_url TEXT,
     verification_phrase TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, game_id),
@@ -78,7 +80,7 @@ CREATE TABLE crypto_deposits (
     required_confirmations INTEGER DEFAULT 30,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     credited_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(tx_hash, network) -- Ensure tx_hash is unique per network
+    UNIQUE(tx_hash, network)
 );
 
 CREATE TABLE gem_purchases (
@@ -95,7 +97,7 @@ CREATE TABLE gem_purchases (
 CREATE TABLE transaction_history (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    game_id VARCHAR(50) REFERENCES games(id) ON DELETE SET NULL, -- Nullable for non-game transactions
+    game_id VARCHAR(50) REFERENCES games(id) ON DELETE SET NULL,
     type VARCHAR(50) NOT NULL CHECK(type IN ('deposit_stripe', 'deposit_crypto', 'withdrawal', 'duel_wager', 'duel_win', 'admin_adjustment', 'tournament_buy_in', 'tournament_prize', 'server_crash_refund')),
     amount_gems BIGINT NOT NULL,
     description TEXT,
@@ -123,7 +125,7 @@ CREATE TABLE inbox_messages (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     game_id VARCHAR(50) REFERENCES games(id) ON DELETE SET NULL,
-    type VARCHAR(50) NOT NULL, -- Type check removed to allow for game-specific types
+    type VARCHAR(50) NOT NULL,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     reference_id TEXT,
@@ -131,7 +133,6 @@ CREATE TABLE inbox_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Duels table now includes a game_id
 CREATE TABLE duels (
     id SERIAL PRIMARY KEY,
     game_id VARCHAR(50) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -140,7 +141,7 @@ CREATE TABLE duels (
     wager BIGINT NOT NULL,
     pot BIGINT DEFAULT 0,
     tax_collected BIGINT DEFAULT 0,
-    game_specific_rules JSONB, -- Generic rules column
+    game_specific_rules JSONB,
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'started', 'in_progress', 'completed_unseen', 'under_review', 'completed', 'canceled', 'declined', 'cheater_forfeit')),
     winner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     challenger_seen_result BOOLEAN DEFAULT FALSE,
@@ -273,7 +274,6 @@ CREATE TABLE reaction_roles (
     PRIMARY KEY (message_id, emoji_id)
 );
 
--- Insert default values for system features and the first game.
 INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 ('site_wide_maintenance', TRUE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
