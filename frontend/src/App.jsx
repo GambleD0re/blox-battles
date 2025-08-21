@@ -24,11 +24,12 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
 const DepositPage = lazy(() => import('./pages/DepositPage.jsx'));
 const WithdrawPage = lazy(() => import('./pages/WithdrawPage.jsx'));
 const TransactionHistoryPage = lazy(() => import('./pages/TransactionHistoryPage.jsx'));
-const DuelHistoryPage = lazy(() => import('./pages/DuelHistoryPage.jsx')); // [NEW] Import global history page
+const DuelHistoryPage = lazy(() => import('./pages/DuelHistoryPage.jsx'));
 
 // Lazy-loaded Game-Specific Pages (Rivals)
 const RivalsDashboard = lazy(() => import('./pages/games/rivals/RivalsDashboard.jsx'));
 const RivalsLinkPage = lazy(() => import('./pages/games/rivals/RivalsLinkPage.jsx'));
+const RivalsTournamentCreatePage = lazy(() => import('./pages/games/rivals/RivalsTournamentCreatePage.jsx'));
 
 // Lazy-loaded Admin Pages
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
@@ -44,20 +45,20 @@ const ProtectedRoute = ({ children, requireGameProfile = null }) => {
     const { user, gameProfiles } = useAuth();
     const location = useLocation();
 
-    if (!user) {
-        return <Navigate to="/signin" state={{ from: location }} replace />;
-    }
-    if (!user.is_email_verified) {
-        return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
-    }
-    if (requireGameProfile && !gameProfiles[requireGameProfile]) {
+    if (!user) return <Navigate to="/signin" state={{ from: location }} replace />;
+    if (!user.is_email_verified) return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
+    if (requireGameProfile && !gameProfiles?.[requireGameProfile]?.linked_game_username) {
         return <Navigate to={`/games/${requireGameProfile}/link`} replace />;
     }
     return children;
 };
 
 const AdminRoute = ({ children, masterOnly = false }) => {
-    // ... (rest of the component is unchanged)
+    const { user } = useAuth();
+    if (!user?.is_admin || (masterOnly && !user.is_master_admin)) {
+        return <Navigate to="/forbidden" replace />;
+    }
+    return children;
 };
 
 const App = () => {
@@ -65,33 +66,47 @@ const App = () => {
 
     if (isLoading) return <Loader fullScreen />;
     if (systemStatus?.site_wide_maintenance && !systemStatus.site_wide_maintenance.isEnabled && !user?.is_master_admin) {
-        // ... (rest of the component is unchanged)
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+                <div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
+                    <h1 className="text-4xl font-bold text-yellow-400">Under Maintenance</h1>
+                    <p className="mt-4 text-lg">{systemStatus.site_wide_maintenance.message}</p>
+                </div>
+            </div>
+        );
     }
-    if (user && user.status === 'banned') {
-        return <Suspense fallback={<Loader fullScreen />}><BanNotice /></Suspense>;
-    }
+    if (user && user.status === 'banned') return <Suspense fallback={<Loader fullScreen />}><BanNotice /></Suspense>;
 
     return (
         <ErrorBoundary>
             <Suspense fallback={<Loader fullScreen />}>
                 <Routes>
-                    {/* Public & Auth Routes */}
                     <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/signin" />} />
-                    {/* ... other public routes ... */}
-                    
-                    {/* Core Protected Routes */}
+                    <Route path="/signin" element={!user ? <SignInPage /> : <Navigate to="/dashboard" />} />
+                    <Route path="/signup" element={!user ? <SignUpPage /> : <Navigate to="/dashboard" />} />
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/verification-notice" element={<VerificationNoticePage />} />
+                    <Route path="/forbidden" element={<ForbiddenPage />} />
+
                     <Route path="/dashboard" element={<ProtectedRoute><MainDashboard /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                     <Route path="/deposit" element={<ProtectedRoute><FeatureGuard featureName="deposits"><DepositPage /></FeatureGuard></ProtectedRoute>} />
                     <Route path="/withdraw" element={<ProtectedRoute><FeatureGuard featureName="withdrawals"><WithdrawPage /></FeatureGuard></ProtectedRoute>} />
                     <Route path="/history" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
-                    <Route path="/duel-history" element={<ProtectedRoute><DuelHistoryPage /></ProtectedRoute>} /> {/* [NEW] Add global history route */}
+                    <Route path="/duel-history" element={<ProtectedRoute><DuelHistoryPage /></ProtectedRoute>} />
 
-                    {/* Game-Specific (Rivals) Routes */}
                     <Route path="/games/rivals/link" element={<ProtectedRoute><RivalsLinkPage /></ProtectedRoute>} />
                     <Route path="/games/rivals/dashboard" element={<ProtectedRoute requireGameProfile="rivals"><RivalsDashboard /></ProtectedRoute>} />
                     
-                    {/* ... other routes ... */}
+                    <Route path="/transcripts/:duelId" element={<TranscriptViewerPage />} />
+                    <Route path="/transcripts/ticket/:ticketId" element={<TicketTranscriptViewerPage />} />
+                    
+                    <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminDashboard /></AdminRoute></ProtectedRoute>} />
+                    <Route path="/admin/system-controls" element={<ProtectedRoute><AdminRoute masterOnly={true}><AdminSystemControlsPage /></AdminRoute></ProtectedRoute>} />
+                    <Route path="/admin/games/rivals/tournaments/create" element={<ProtectedRoute><AdminRoute><RivalsTournamentCreatePage /></AdminRoute></ProtectedRoute>} />
+                    
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </Suspense>
