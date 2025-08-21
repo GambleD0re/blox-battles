@@ -79,7 +79,8 @@ passport.use(new GoogleStrategy({
 
         ({ rows: [user] } = await db.query('SELECT * FROM users WHERE email = $1', [email]));
         if (user) {
-            await db.query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, user.id]);
+            // [FIX] When linking an existing account, also set is_email_verified to TRUE.
+            await db.query('UPDATE users SET google_id = $1, is_email_verified = TRUE WHERE id = $2', [googleId, user.id]);
             const { rows: [updatedUser] } = await db.query('SELECT * FROM users WHERE id = $1', [user.id]);
             return done(null, updatedUser);
         }
@@ -88,6 +89,7 @@ passport.use(new GoogleStrategy({
         const finalUsername = existingUsername ? `${username}${crypto.randomInt(1000, 9999)}` : username;
         const newUserId = crypto.randomUUID();
         
+        // This part was already correct, as new Google users are automatically verified.
         await db.query('INSERT INTO users (id, google_id, email, username, is_admin, is_email_verified) VALUES ($1, $2, $3, $4, false, true)', [newUserId, googleId, email, finalUsername]);
         const { rows: [newUser] } = await db.query('SELECT * FROM users WHERE id = $1', [newUserId]);
         return done(null, newUser);
@@ -105,9 +107,6 @@ const wss = initializeWebSocket(server);
 
 server.listen(PORT, async () => {
     console.log(`Backend API server started on port: ${PORT}`);
-    
-    // [FIX] Eager initialization removed. This will be called on-demand by the first API request needing it.
-    // await initializePriceFeed(); 
     
     startTransactionListener();
     startConfirmationService();
