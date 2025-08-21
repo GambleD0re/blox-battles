@@ -1,0 +1,120 @@
+// frontend/src/context/AuthContext.jsx
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import * as api from '../services/api';
+import { jwtDecode } from 'jwt-decode';
+
+const AuthContext = createContext(null);
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [gameProfiles, setGameProfiles] = useState({});
+    const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [systemStatus, setSystemStatus] = useState(null);
+    const [appConfig, setAppConfig] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const logout = useCallback(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+        setGameProfiles({});
+    }, []);
+
+    const fetchAndSetAllData = useCallback(async (tokenToUse) => {
+        try {
+            const [statusData, configData, userData] = await Promise.all([
+                api.getFeatureStatus(),
+                api.getAppConfig(),
+                api.getCoreUserData(tokenToUse)
+            ]);
+            setSystemStatus(statusData);
+            setAppConfig(configData);
+            setUser(userData);
+        } catch (error) {
+            console.error("Failed to fetch initial data, logging out.", error);
+            logout();
+        }
+    }, [logout]);
+
+    useEffect(() => {
+        const initializeAuth = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            const existingToken = localStorage.getItem('token');
+            const tokenToUse = urlToken || existingToken;
+
+            if (urlToken) {
+                localStorage.setItem('token', urlToken);
+                setToken(urlToken);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (tokenToUse) {
+                try {
+                    const decoded = jwtDecode(tokenToUse);
+                    if (decoded.exp * 1000 < Date.now()) {
+                        logout();
+                    } else {
+                        await fetchAndSetAllData(tokenToUse);
+                    }
+                } catch (e) {
+                    logout();
+                }
+            }
+            setIsLoading(false);
+        };
+        initializeAuth();
+    }, [logout, fetchAndSetAllData]);
+
+    const login = useCallback(async (newToken) => {
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        setIsLoading(true);
+        await fetchAndSetAllData(newToken);
+        setIsLoading(false);
+    }, [fetchAndSetAllData]);
+    
+    const refreshUser = useCallback(async () => {
+       const tokenFromStorage = localStorage.getItem('token');
+       if (!tokenFromStorage) {
+           logout();
+           return;
+       }
+       try {
+           const newUserData = await api.getCoreUserData(tokenFromStorage);
+           setUser(prevUser => ({ ...prevUser, ...newUserData }));
+       } catch (error) {
+           console.error("Failed to refresh user data:", error);
+           logout();
+       }
+    }, [logout]);
+    
+    const refreshGameProfile = useCallback(async (gameId) => {
+        const tokenFromStorage = localStorage.getItem('token');
+        if (!tokenFromStorage || !gameId) return;
+        try {
+            let profileData;
+            if (gameId === 'rivals') {
+                profileData = await api.getRivalsGameProfile(tokenFromStorage);
+            }
+            // Future games would have their own case here
+            
+            if (profileData) {
+                setGameProfiles(prev => ({ ...prev, [gameId]: profileData }));
+            }
+        } catch (error) {
+            // A 404 is expected if the profile doesn't exist yet
+            if (error.response?.status !== 404) {
+                 console.error(`Failed to refresh game profile for ${gameId}:`, error);
+            } else {
+                 setGameProfiles(prev => ({ ...prev, [gameId]: null }));
+            }
+        }
+    }, []);
+
+    const value = { user, gameProfiles, token, systemStatus, appConfig, login, logout, isLoading, refreshUser, refreshGameProfile };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
