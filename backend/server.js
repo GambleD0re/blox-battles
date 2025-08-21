@@ -106,7 +106,9 @@ const wss = initializeWebSocket(server);
 server.listen(PORT, async () => {
     console.log(`Backend API server started on port: ${PORT}`);
     
-    await initializePriceFeed();
+    // [FIX] Eager initialization removed. This will be called on-demand by the first API request needing it.
+    // await initializePriceFeed(); 
+    
     startTransactionListener();
     startConfirmationService();
     startGhostFeed(wss);
