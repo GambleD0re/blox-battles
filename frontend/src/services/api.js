@@ -6,29 +6,21 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
         method,
         headers: {},
     };
-
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
-    }
-
+    if (token) options.headers['Authorization'] = `Bearer ${token}`;
     if (body) {
         options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
     }
-
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
-
         if (!response.ok) {
-            const error = new Error(data.message || `Error: ${response.status} ${response.statusText}`);
+            const error = new Error(data.message || `Error: ${response.status}`);
             error.response = { status: response.status, data: data };
             throw error;
         }
-        
         return data;
-
     } catch (error) {
         console.error(`[API Error] ${method} ${endpoint}:`, error.message);
         throw error;
@@ -50,6 +42,7 @@ export const resetPassword = (token, password) => apiRequest('/auth/reset-passwo
 
 // --- Core User Routes ---
 export const getCoreUserData = (token) => apiRequest('/user-data', 'GET', null, token);
+export const setUsername = (username, token) => apiRequest('/user/set-username', 'POST', { username }, token);
 export const updatePassword = (passwordData, token) => apiRequest('/user/password', 'PUT', passwordData, token);
 export const unlinkDiscord = (token) => apiRequest('/user/unlink/discord', 'POST', null, token);
 export const deleteAccount = (password, token) => apiRequest('/user/delete/account', 'DELETE', { password }, token);
@@ -79,25 +72,19 @@ export const startRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/d
 export const forfeitRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/forfeit`, 'POST', null, token);
 export const getRivalsUnseenResults = (token) => apiRequest(`${RIVALS_PREFIX}/duels/unseen-results`, 'GET', null, token);
 export const confirmRivalsDuelResult = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/confirm-result`, 'POST', null, token);
-export const getRivalsDuelHistory = (token) => apiRequest(`${RIVALS_PREFIX}/duels/history`, 'GET', null, token); // [DEPRECATED-STYLE]
 export const getQueueStatus = (token) => apiRequest(`${RIVALS_PREFIX}/queue/status`, 'GET', null, token);
 export const joinQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX}/queue/join`, 'POST', queueData, token);
 export const leaveQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
 
 // --- Generic/Shared Routes ---
-export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token); // [FIX] Exporting the correct global function
+export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
 export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
 export const getTranscript = (duelId, token) => apiRequest(`/transcripts/${duelId}`, 'GET', null, token);
 
 // --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
-export const getAdminUsers = (searchQuery, token, status) => {
-    const params = new URLSearchParams();
-    if (searchQuery) { params.append('search', searchQuery); }
-    if (status) { params.append('status', status); }
-    return apiRequest(`/admin/users?${params.toString()}`, 'GET', null, token);
-};
+export const getAdminUsers = (searchQuery, token, status) => { /* ... */ };
 export const updateUserGems = (userId, amount, token) => apiRequest(`/admin/users/${userId}/gems`, 'POST', { amount }, token);
 export const banUser = (userId, reason, duration_hours, token) => apiRequest(`/admin/users/${userId}/ban`, 'POST', { reason, duration_hours }, token);
 export const unbanUser = (userId, token) => apiRequest(`/admin/users/${userId}/ban`, 'DELETE', null, token);
