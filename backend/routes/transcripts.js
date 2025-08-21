@@ -15,12 +15,13 @@ router.get('/:duelId', param('duelId').isInt(), handleValidationErrors, async (r
                 d.transcript,
                 d.wager,
                 d.pot,
-                d.game_id,
                 d.game_specific_rules,
+                g.name as game_name,
                 c_profile.linked_game_username as challenger_username,
                 o_profile.linked_game_username as opponent_username,
                 w_profile.linked_game_username as winner_username
             FROM duels d
+            JOIN games g ON d.game_id = g.id
             JOIN user_game_profiles c_profile ON d.challenger_id = c_profile.user_id AND d.game_id = c_profile.game_id
             JOIN user_game_profiles o_profile ON d.opponent_id = o_profile.user_id AND d.game_id = o_profile.game_id
             LEFT JOIN user_game_profiles w_profile ON d.winner_id = w_profile.user_id AND d.game_id = w_profile.game_id
