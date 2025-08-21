@@ -7,7 +7,7 @@ import RivalsPlayerHeader from '../../../components/games/rivals/RivalsPlayerHea
 import ChallengePlayer from '../../../components/games/rivals/ChallengePlayer';
 import Inbox from '../../../components/games/rivals/Inbox';
 import QuickMatchWidget from '../../../components/games/rivals/QuickMatchWidget';
-import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget'; // [FIXED] Corrected import path
+import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget';
 import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
 import { ChallengeModal, DuelDetailsModal, ConfirmationModal, TranscriptModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
