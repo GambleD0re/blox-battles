@@ -17,6 +17,7 @@ import VerificationNoticePage from './pages/VerificationNoticePage.jsx';
 import BanNotice from './pages/BanNotice.jsx';
 import TranscriptViewerPage from './pages/TranscriptViewerPage.jsx';
 import TicketTranscriptViewerPage from './pages/TicketTranscriptViewerPage.jsx';
+import SetUsernamePage from './pages/SetUsernamePage.jsx'; // New page import
 
 // Lazy-loaded Core Pages
 const MainDashboard = lazy(() => import('./pages/MainDashboard.jsx'));
@@ -45,14 +46,14 @@ const ProtectedRoute = ({ children, requireGameProfile = null }) => {
     const { user, gameProfiles } = useAuth();
     const location = useLocation();
 
-    if (!user) {
-        return <Navigate to="/signin" state={{ from: location }} replace />;
+    if (!user) return <Navigate to="/signin" state={{ from: location }} replace />;
+
+    // [NEW] Force user to set a username if they haven't yet.
+    if (!user.is_username_set && location.pathname !== '/set-username') {
+        return <Navigate to="/set-username" replace />;
     }
 
-    // [FIX] This check now correctly ignores Google users and only applies to unverified email/password accounts.
-    if (!user.google_id && !user.is_email_verified) {
-        return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
-    }
+    if (!user.google_id && !user.is_email_verified) return <Navigate to="/verification-notice" state={{ email: user.email }} replace />;
     
     if (requireGameProfile && !gameProfiles?.[requireGameProfile]?.linked_game_username) {
         return <Navigate to={`/games/${requireGameProfile}/link`} replace />;
@@ -74,14 +75,7 @@ const App = () => {
 
     if (isLoading) return <Loader fullScreen />;
     if (systemStatus?.site_wide_maintenance && !systemStatus.site_wide_maintenance.isEnabled && !user?.is_master_admin) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-                <div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
-                    <h1 className="text-4xl font-bold text-yellow-400">Under Maintenance</h1>
-                    <p className="mt-4 text-lg">{systemStatus.site_wide_maintenance.message}</p>
-                </div>
-            </div>
-        );
+        return <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white"><div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl"><h1 className="text-4xl font-bold text-yellow-400">Under Maintenance</h1><p className="mt-4 text-lg">{systemStatus.site_wide_maintenance.message}</p></div></div>;
     }
     if (user && user.status === 'banned') return <Suspense fallback={<Loader fullScreen />}><BanNotice /></Suspense>;
 
@@ -97,6 +91,8 @@ const App = () => {
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/verification-notice" element={<VerificationNoticePage />} />
                     <Route path="/forbidden" element={<ForbiddenPage />} />
+
+                    <Route path="/set-username" element={<ProtectedRoute><SetUsernamePage /></ProtectedRoute>} />
 
                     <Route path="/dashboard" element={<ProtectedRoute><MainDashboard /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
