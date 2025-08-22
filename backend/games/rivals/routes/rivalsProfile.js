@@ -13,12 +13,10 @@ const generateUniquePhrase = () => {
     return [...Array(12)].map(() => words[Math.floor(Math.random() * words.length)]).join(" ");
 };
 
-// GET the user's game-specific profile for Rivals
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const { rows: [profile] } = await db.query('SELECT * FROM user_game_profiles WHERE user_id = $1 AND game_id = $2', [req.user.userId, RIVALS_GAME_ID]);
         if (!profile) {
-            // If no profile exists, create one with a verification phrase
             const newPhrase = generateUniquePhrase();
             const { rows: [newProfile] } = await db.query(
                 'INSERT INTO user_game_profiles (user_id, game_id, verification_phrase) VALUES ($1, $2, $3) RETURNING *',
@@ -33,7 +31,21 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// POST to link/verify a Roblox account for Rivals
+router.put('/challenge-preference', authenticateToken,
+    body('enabled').isBoolean().withMessage('A boolean value for "enabled" is required.'),
+    handleValidationErrors,
+    async (req, res) => {
+        const { enabled } = req.body;
+        try {
+            await db.query('UPDATE user_game_profiles SET accepting_challenges = $1 WHERE user_id = $2 AND game_id = $3', [enabled, req.user.userId, RIVALS_GAME_ID]);
+            res.status(200).json({ message: 'Rivals challenge preferences updated successfully.' });
+        } catch (err) {
+            console.error("Update Rivals Challenge Preference Error:", err.message);
+            res.status(500).json({ message: 'An internal server error occurred.' });
+        }
+    }
+);
+
 router.post('/link', authenticateToken,
     body('robloxUsername').trim().escape().notEmpty().withMessage('Roblox username is required.'),
     handleValidationErrors,
@@ -72,7 +84,6 @@ router.post('/link', authenticateToken,
     }
 );
 
-// POST to unlink a Roblox account from Rivals
 router.post('/unlink', authenticateToken, async (req, res) => {
     try {
         const newPhrase = generateUniquePhrase();
