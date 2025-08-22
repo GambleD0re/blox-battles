@@ -10,7 +10,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [gameProfiles, setGameProfiles] = useState({});
-    const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [token, setToken] = useState(null);
     const [systemStatus, setSystemStatus] = useState(null);
     const [appConfig, setAppConfig] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,43 +32,13 @@ export const AuthProvider = ({ children }) => {
             ]);
             setSystemStatus(statusData);
             setAppConfig(configData);
-            setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: userData.is_username_set });
+            setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set });
         } catch (error) {
             console.error("Failed to fetch initial data, logging out.", error);
             logout();
         }
     }, [logout]);
-
-    useEffect(() => {
-        const initializeAuth = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlToken = urlParams.get('token');
-            const existingToken = localStorage.getItem('token');
-            const tokenToUse = urlToken || existingToken;
-
-            if (urlToken) {
-                localStorage.setItem('token', urlToken);
-                setToken(urlToken);
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
-            if (tokenToUse) {
-                try {
-                    const decoded = jwtDecode(tokenToUse);
-                    if (decoded.exp * 1000 < Date.now()) {
-                        logout();
-                    } else {
-                        await fetchAndSetAllData(tokenToUse);
-                    }
-                } catch (e) {
-                    logout();
-                }
-            }
-            setIsLoading(false);
-        };
-        initializeAuth();
-    }, [logout, fetchAndSetAllData]);
-
+    
     const login = useCallback(async (newToken) => {
         localStorage.setItem('token', newToken);
         setToken(newToken);
@@ -76,6 +46,35 @@ export const AuthProvider = ({ children }) => {
         await fetchAndSetAllData(newToken);
         setIsLoading(false);
     }, [fetchAndSetAllData]);
+
+    useEffect(() => {
+        const initializeAuth = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+
+            if (urlToken) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                await login(urlToken);
+            } else {
+                const existingToken = localStorage.getItem('token');
+                if (existingToken) {
+                    try {
+                        const decoded = jwtDecode(existingToken);
+                        if (decoded.exp * 1000 < Date.now()) {
+                            logout();
+                        } else {
+                            setToken(existingToken);
+                            await fetchAndSetAllData(existingToken);
+                        }
+                    } catch (e) {
+                        logout();
+                    }
+                }
+            }
+            setIsLoading(false);
+        };
+        initializeAuth();
+    }, [login, logout, fetchAndSetAllData]);
     
     const refreshUser = useCallback(async () => {
        const tokenFromStorage = localStorage.getItem('token');
@@ -84,8 +83,9 @@ export const AuthProvider = ({ children }) => {
            return;
        }
        try {
+           const decoded = jwtDecode(tokenFromStorage);
            const newUserData = await api.getCoreUserData(tokenFromStorage);
-           setUser(prevUser => ({ ...prevUser, ...newUserData }));
+           setUser(prevUser => ({ ...prevUser, ...newUserData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set }));
        } catch (error) {
            console.error("Failed to refresh user data:", error);
            logout();
