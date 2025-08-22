@@ -30,7 +30,6 @@ const RivalsDashboard = () => {
     const [isQueueModalOpen, setQueueModalOpen] = useState(false);
     
     const [selectedOpponent, setSelectedOpponent] = useState(null);
-    const [selectedDuel, setSelectedDuel] = useState(null);
 
     const showMessage = (text, type = 'success') => {
         setMessage({ text, type });
@@ -85,6 +84,28 @@ const RivalsDashboard = () => {
             showMessage(result.message, 'success');
             fetchRivalsData();
         } catch(error) {
+            showMessage(error.message, 'error');
+        }
+    };
+    
+    const handleConfirmResult = async (duelId) => {
+        try {
+            await api.confirmRivalsDuelResult(duelId, token);
+            setUnseenResults(prev => prev.filter(r => r.id !== duelId));
+            showMessage('Result confirmed!', 'success');
+            refreshUser();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    };
+
+    const handleDisputeResult = async (duelId, disputeData) => {
+        try {
+            const result = await api.fileRivalsDispute(duelId, disputeData, token);
+            showMessage(result.message, 'success');
+            setUnseenResults(prev => prev.filter(r => r.id !== duelId));
+            fetchRivalsData();
+        } catch (error) {
             showMessage(error.message, 'error');
         }
     };
@@ -164,6 +185,17 @@ const RivalsDashboard = () => {
                 duelDetails={matchReadyInfo}
                 currentUser={rivalsProfile}
             />
+
+            {(unseenResults || []).map(result => (
+                <PostDuelModal 
+                    key={result.id}
+                    isOpen={true}
+                    result={result}
+                    currentUser={user}
+                    onConfirm={handleConfirmResult}
+                    onDispute={handleDisputeResult}
+                />
+            ))}
             
             <LiveFeed 
                 token={token} 
