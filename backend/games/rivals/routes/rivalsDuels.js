@@ -79,6 +79,34 @@ router.post('/:id/confirm-result', authenticateToken, param('id').isInt(), handl
     }
 });
 
+router.post('/:id/dispute', authenticateToken, param('id').isInt(), body('reason').trim().notEmpty(), body('has_video_evidence').isBoolean(), handleValidationErrors, async (req, res) => {
+    const duelId = req.params.id;
+    const reporterId = req.user.userId;
+    const { reason, has_video_evidence } = req.body;
+    const client = await db.getPool().connect();
+    try {
+        await client.query('BEGIN');
+        const { rows: [duel] } = await client.query("SELECT * FROM duels WHERE id = $1 AND game_id = $2 AND status = 'completed_unseen' FOR UPDATE", [duelId, RIVALS_GAME_ID]);
+        if (!duel) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Duel not found or cannot be disputed.' }); }
+        
+        const reportedId = (duel.challenger_id.toString() === reporterId) ? duel.opponent_id : duel.challenger_id;
+        await client.query('INSERT INTO disputes (duel_id, reporter_id, reported_id, reason, has_video_evidence) VALUES ($1, $2, $3, $4, $5)', [duelId, reporterId, reportedId, reason, has_video_evidence]);
+        
+        await client.query("UPDATE duels SET status = 'under_review' WHERE id = $1", [duelId]);
+        console.log(`Dispute filed for duel ${duelId}. Duel is now under review.`);
+        
+        await client.query('COMMIT');
+        sendInboxRefresh(reportedId);
+        res.status(201).json({ message: 'Dispute filed successfully. An admin will review it shortly.' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Dispute Filing Error:", err.message);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    } finally {
+        client.release();
+    }
+});
+
 router.post('/challenge', authenticateToken,
     body('opponent_id').isUUID(), body('wager').isInt({ gt: 0 }),
     body('rules.map').trim().escape().notEmpty(),
@@ -96,8 +124,6 @@ router.post('/challenge', authenticateToken,
                 await client.query('ROLLBACK');
                 return res.status(400).json({ message: 'You do not have enough gems for this wager.' });
             }
-
-            const { rows: [opponent] } = await client.query('SELECT discord_id FROM users WHERE id = $1', [opponent_id]);
 
             await client.query(
                 'INSERT INTO duels (game_id, challenger_id, opponent_id, wager, game_specific_rules) VALUES ($1, $2, $3, $4, $5)', 
@@ -155,9 +181,5 @@ router.post('/:id/start', authenticateToken, param('id').isInt(), handleValidati
         client.release();
     }
 });
-
-// Other routes like /:id/bot-confirm, /:id/forfeit, /history, /respond, /cancel, /transcript/:id would be refactored similarly,
-// ensuring they query with `game_id = 'rivals'` and join with `user_game_profiles` for game-specific data.
-// For brevity, only the key refactored routes are shown in full.
 
 module.exports = router;
