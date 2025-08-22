@@ -4,20 +4,21 @@ const db = require('../../database/database');
 const { getLatestPrice } = require('./priceFeedService');
 
 const CONFIRMATION_CHECK_INTERVAL = 60 * 1000;
+let alchemyClients = null;
 
-const alchemyPolygon = new Alchemy({
-    apiKey: process.env.ALCHEMY_API_KEY,
-    network: Network.MATIC_MAINNET,
-});
-const alchemyEthereum = new Alchemy({
-    apiKey: process.env.ALCHEMY_API_KEY,
-    network: Network.ETH_MAINNET,
-});
-
-const alchemyClients = {
-    polygon: alchemyPolygon,
-    ethereum: alchemyEthereum,
-};
+function initializeAlchemyClients() {
+    if (alchemyClients) return true;
+    if (!process.env.ALCHEMY_API_KEY) {
+        console.warn("[Confirmer] ALCHEMY_API_KEY not found. Transaction confirmation service is disabled.");
+        return false;
+    }
+    
+    alchemyClients = {
+        polygon: new Alchemy({ apiKey: process.env.ALCHEMY_API_KEY, network: Network.MATIC_MAINNET }),
+        ethereum: new Alchemy({ apiKey: process.env.ALCHEMY_API_KEY, network: Network.ETH_MAINNET }),
+    };
+    return true;
+}
 
 async function getLatestBlockNumber(network) {
     try {
@@ -31,14 +32,13 @@ async function getLatestBlockNumber(network) {
 }
 
 async function processPendingDeposits() {
+    if (!initializeAlchemyClients()) return;
+
     try {
         const { rows: pendingDeposits } = await db.query("SELECT * FROM crypto_deposits WHERE status = 'pending'");
-        if (pendingDeposits.length === 0) {
-            return;
-        }
+        if (pendingDeposits.length === 0) return;
 
         console.log(`[Confirmer] Checking ${pendingDeposits.length} pending deposits...`);
-
         const latestBlocks = {
             polygon: await getLatestBlockNumber('polygon'),
             ethereum: await getLatestBlockNumber('ethereum'),
@@ -49,17 +49,10 @@ async function processPendingDeposits() {
             try {
                 const alchemyClient = alchemyClients[deposit.network];
                 const latestBlock = latestBlocks[deposit.network];
-                if (!alchemyClient || latestBlock === 0) {
-                    client.release();
-                    continue;
-                }
+                if (!alchemyClient || latestBlock === 0) { client.release(); continue; }
 
                 const txReceipt = await alchemyClient.core.getTransactionReceipt(deposit.tx_hash);
-                if (!txReceipt || !txReceipt.blockNumber) {
-                    client.release();
-                    continue;
-                }
-
+                if (!txReceipt || !txReceipt.blockNumber) { client.release(); continue; }
                 if (txReceipt.status === 0) {
                     await client.query("UPDATE crypto_deposits SET status = 'failed' WHERE id = $1", [deposit.id]);
                     client.release();
@@ -69,42 +62,37 @@ async function processPendingDeposits() {
                 const confirmations = latestBlock - txReceipt.blockNumber;
                 if (confirmations >= deposit.required_confirmations) {
                     await client.query('BEGIN');
-                    
                     const GEM_PER_DOLLAR = parseInt(process.env.USD_TO_GEMS_RATE || '100', 10);
                     const priceSymbol = `${deposit.token_type}_USD_${deposit.network.toUpperCase()}`;
                     const currentPrice = await getLatestPrice(priceSymbol);
                     
-                    if (!currentPrice || currentPrice <= 0) {
-                        throw new Error(`Could not fetch a valid price for ${deposit.token_type} on ${deposit.network}.`);
-                    }
+                    if (!currentPrice || currentPrice <= 0) throw new Error(`Could not fetch price for ${priceSymbol}.`);
 
                     const usdValue = parseFloat(deposit.amount_crypto) * currentPrice;
                     const gemsToCredit = Math.floor(usdValue * GEM_PER_DOLLAR);
 
                     await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [gemsToCredit, deposit.user_id]);
-                    await client.query(
-                        "UPDATE crypto_deposits SET status = 'credited', credited_at = NOW(), block_number = $1, gem_amount = $2 WHERE id = $3", 
-                        [txReceipt.blockNumber, gemsToCredit, deposit.id]
-                    );
-                    
+                    await client.query("UPDATE crypto_deposits SET status = 'credited', credited_at = NOW(), block_number = $1, gem_amount = $2 WHERE id = $3", [txReceipt.blockNumber, gemsToCredit, deposit.id]);
                     await client.query('COMMIT');
-                    console.log(`[Confirmer] Credited ${gemsToCredit} gems to user ${deposit.user_id} for ${deposit.amount_crypto} ${deposit.token_type} on ${deposit.network}.`);
+                    console.log(`[Confirmer] Credited ${gemsToCredit} gems to user ${deposit.user_id} for deposit ${deposit.id}.`);
                 }
-
             } catch (error) {
                 await client.query('ROLLBACK').catch(console.error);
-                console.error(`[Confirmer] Error processing deposit ID ${deposit.id} (TX: ${deposit.tx_hash}):`, error);
+                console.error(`[Confirmer] Error processing deposit ID ${deposit.id}:`, error);
             } finally {
                 client.release();
             }
         }
-
     } catch (error) {
         console.error("[Confirmer] A critical error occurred in the main processing loop:", error);
     }
 }
 
 function startConfirmationService() {
+    if (!process.env.ALCHEMY_API_KEY) {
+        console.warn("[Confirmer] ALCHEMY_API_KEY not found. Service will not start.");
+        return;
+    }
     console.log(`[Confirmer] Starting confirmation service. Check interval: ${CONFIRMATION_CHECK_INTERVAL / 1000} seconds.`);
     processPendingDeposits();
     setInterval(processPendingDeposits, CONFIRMATION_CHECK_INTERVAL);
