@@ -15,7 +15,7 @@ router.get('/user-data', authenticateToken, async (req, res) => {
         const userSql = `
             SELECT id, email, username, google_id, gems, is_admin, 
                    discord_id, discord_username, created_at, password_last_updated, 
-                   discord_notifications_enabled, status, 
+                   discord_notifications_enabled, accepting_challenges, status, 
                    ban_reason, ban_applied_at, ban_expires_at, is_email_verified, is_username_set
             FROM users WHERE id = $1
         `;
@@ -40,16 +40,20 @@ router.post('/user/set-username', authenticateToken,
         try {
             await client.query('BEGIN');
             const { rows: [user] } = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [userId]);
+
             if (user.is_username_set) {
                 await client.query('ROLLBACK');
                 return res.status(400).json({ message: 'Username has already been set.' });
             }
+
             const { rows: [existingUser] } = await client.query('SELECT id FROM users WHERE username ILIKE $1', [username]);
             if (existingUser) {
                 await client.query('ROLLBACK');
                 return res.status(409).json({ message: 'This username is already taken.' });
             }
+
             await client.query('UPDATE users SET username = $1, is_username_set = TRUE WHERE id = $2', [username, userId]);
+            
             const payload = {
                 userId: user.id,
                 username: username,
@@ -57,8 +61,10 @@ router.post('/user/set-username', authenticateToken,
                 is_username_set: true,
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
+
             await client.query('COMMIT');
             res.status(200).json({ message: 'Username set successfully!', token });
+
         } catch (error) {
             await client.query('ROLLBACK');
             console.error('Set Username Error:', error);
@@ -95,7 +101,7 @@ router.post('/user/unlink/discord', authenticateToken, async (req, res) => {
     try {
         await db.query('UPDATE users SET discord_id = NULL, discord_username = NULL WHERE id = $1', [req.user.userId]);
         res.status(200).json({ message: 'Discord account unlinked successfully.' });
-    } catch(err) {
+    } catch (err) {
         console.error("Unlink Discord Error:", err.message);
         res.status(500).json({ message: 'An internal server error occurred.' });
     }
@@ -108,21 +114,19 @@ router.delete('/user/delete/account', authenticateToken, body('password').option
         await client.query('BEGIN');
         const { rows: [user] } = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [req.user.userId]);
         if (!user) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'User not found.' }); }
+
         const deleteUser = async () => {
             await client.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
             await client.query('COMMIT');
             res.status(200).json({ message: 'Account deleted successfully.' });
         };
+
         if (user.google_id) return await deleteUser();
-        if (!password) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ message: 'Password is required to delete your account.' });
-        }
+        if (!password) { await client.query('ROLLBACK'); return res.status(400).json({ message: 'Password is required to delete your account.' }); }
+        
         const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) {
-            await client.query('ROLLBACK');
-            return res.status(401).json({ message: 'Incorrect password.' });
-        }
+        if (!isMatch) { await client.query('ROLLBACK'); return res.status(401).json({ message: 'Incorrect password.' }); }
+
         await deleteUser();
     } catch(err) {
         await client.query('ROLLBACK');
@@ -138,6 +142,17 @@ router.put('/user/notification-preference', authenticateToken, body('enabled').i
         await db.query('UPDATE users SET discord_notifications_enabled = $1 WHERE id = $2', [req.body.enabled, req.user.userId]);
         res.status(200).json({ message: 'Notification preferences updated.' });
     } catch (err) {
+        console.error("Update Notification Preference Error:", err.message);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    }
+});
+
+router.put('/user/challenge-preference', authenticateToken, body('enabled').isBoolean(), handleValidationErrors, async (req, res) => {
+    try {
+        await db.query('UPDATE users SET accepting_challenges = $1 WHERE id = $2', [req.body.enabled, req.user.userId]);
+        res.status(200).json({ message: 'Challenge preferences updated.' });
+    } catch (err) {
+        console.error("Update Challenge Preference Error:", err.message);
         res.status(500).json({ message: 'An internal server error occurred.' });
     }
 });
