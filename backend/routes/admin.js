@@ -314,8 +314,24 @@ router.post('/users/:id/ban', authenticateToken, isAdmin,
             const banSql = `UPDATE users SET status = 'banned', ban_reason = $1, ban_expires_at = ${banExpiresAtClause}, ban_applied_at = NOW() WHERE id = $2`;
             await client.query(banSql, [reason, id]);
             
+            // [ADDED] Cancel pending payout requests for the banned user
+            await client.query("UPDATE payout_requests SET status = 'canceled_by_user' WHERE user_id = $1 AND status = 'awaiting_approval'", [id]);
+            
+            // [ADDED] Cancel pending duels and refund opponents
+            const { rows: pendingDuels } = await client.query("SELECT * FROM duels WHERE (challenger_id = $1 OR opponent_id = $1) AND status IN ('pending', 'accepted') FOR UPDATE", [id]);
+            for (const duel of pendingDuels) {
+                if (duel.status === 'accepted') {
+                    const opponentId = duel.challenger_id.toString() === id ? duel.opponent_id : duel.challenger_id;
+                    await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.wager, opponentId]);
+                }
+                if(duel.status === 'started' || duel.status === 'accepted'){
+                    await decrementPlayerCount(client, duel.id);
+                }
+                await client.query("UPDATE duels SET status = 'canceled' WHERE id = $1", [duel.id]);
+            }
+            
             await client.query('COMMIT');
-            res.status(200).json({ message: `User ${id} has been banned.` });
+            res.status(200).json({ message: `User ${id} has been banned and their pending actions canceled.` });
         } catch (err) {
             await client.query('ROLLBACK');
             console.error("Admin ban user error:", err);
