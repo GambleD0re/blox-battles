@@ -1,19 +1,23 @@
 // frontend/src/pages/games/rivals/RivalsLinkPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import * as api from '../../../services/api';
 
 const RivalsLinkPage = () => {
-    const { user, token, refreshGameProfile } = useAuth();
+    const { token, gameProfiles, refreshGameProfile } = useAuth();
     const navigate = useNavigate();
     const [robloxUsername, setRobloxUsername] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    // Note: This assumes the verification phrase is part of the game profile.
-    // We might need to fetch it separately if it's not already loaded.
-    const verificationPhrase = user?.gameProfiles?.rivals?.verification_phrase || 'Loading phrase...';
+    const rivalsProfile = gameProfiles?.rivals;
+    const verificationPhrase = rivalsProfile?.verification_phrase;
+
+    // [FIX] Fetch the game profile data when the component mounts
+    useEffect(() => {
+        refreshGameProfile('rivals');
+    }, [refreshGameProfile]);
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -36,7 +40,7 @@ const RivalsLinkPage = () => {
     };
 
     const copyPhrase = () => {
-        if (verificationPhrase && verificationPhrase !== 'Loading phrase...') {
+        if (verificationPhrase) {
             navigator.clipboard.writeText(verificationPhrase);
             setMessage({ text: 'Copied to clipboard!', type: 'success' });
             setTimeout(() => setMessage(prev => (prev.text === 'Copied to clipboard!' ? {text: '', type: ''} : prev)), 2000);
@@ -58,7 +62,7 @@ const RivalsLinkPage = () => {
                 </div>
 
                 <div className="bg-gray-900 border border-dashed border-gray-600 p-4 rounded-lg font-mono text-[var(--accent-color)] cursor-pointer" onClick={copyPhrase}>
-                    {verificationPhrase}
+                    {verificationPhrase || 'Loading phrase...'}
                 </div>
 
                 <form onSubmit={handleVerify}>
@@ -66,7 +70,7 @@ const RivalsLinkPage = () => {
                         <label className="block text-sm font-medium text-gray-300 mb-1">Your Roblox Username</label>
                         <input type="text" value={robloxUsername} onChange={e => setRobloxUsername(e.target.value)} required className="form-input" placeholder="Enter your Roblox username..." />
                     </div>
-                    <button type="submit" disabled={isLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
+                    <button type="submit" disabled={isLoading || !verificationPhrase} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
                         {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Verify & Play Rivals'}
                     </button>
                 </form>
