@@ -82,4 +82,4 @@ module.exports = {
             await interaction.editReply({ content: `❌ ${error.response?.data?.message || 'An error occurred.'}`, embeds: [], components: [] });
         }
     },
-};```
+};
