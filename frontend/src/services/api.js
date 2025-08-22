@@ -14,7 +14,14 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         const text = await response.text();
-        const data = text ? JSON.parse(text) : {};
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            data = { message: text || `Received ${response.status} status with no content.` };
+        }
+
         if (!response.ok) {
             const error = new Error(data.message || `Error: ${response.status}`);
             error.response = { status: response.status, data: data };
@@ -61,11 +68,13 @@ export const cancelWithdrawalRequest = (requestId, token) => apiRequest(`/payout
 // --- Rivals Game Routes ---
 const RIVALS_PREFIX = '/games/rivals';
 export const getRivalsGameProfile = (token) => apiRequest(`${RIVALS_PREFIX}/profile`, 'GET', null, token);
+export const updateRivalsChallengePreference = (enabled, token) => apiRequest(`${RIVALS_PREFIX}/profile/challenge-preference`, 'PUT', { enabled }, token);
 export const verifyRivalsAccount = (robloxUsername, token) => apiRequest(`${RIVALS_PREFIX}/profile/link`, 'POST', { robloxUsername }, token);
 export const unlinkRivalsAccount = (token) => apiRequest(`${RIVALS_PREFIX}/profile/unlink`, 'POST', null, token);
 export const getRivalsGameData = (token) => apiRequest(`${RIVALS_PREFIX}/gamedata`, 'GET', null, token);
 export const findRivalsPlayer = (robloxUsername, token) => apiRequest(`${RIVALS_PREFIX}/duels/find-player?roblox_username=${encodeURIComponent(robloxUsername)}`, 'GET', null, token);
 export const sendRivalsChallenge = (challengeData, token) => apiRequest(`${RIVALS_PREFIX}/duels/challenge`, 'POST', challengeData, token);
+export const respondToRivalsDuel = (duelId, response, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/respond`, 'POST', { response }, token);
 export const getRivalsUnseenResults = (token) => apiRequest(`${RIVALS_PREFIX}/duels/unseen-results`, 'GET', null, token);
 export const confirmRivalsDuelResult = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/confirm-result`, 'POST', null, token);
 export const fileRivalsDispute = (duelId, disputeData, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/dispute`, 'POST', disputeData, token);
@@ -77,8 +86,8 @@ export const leaveQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 
 // --- Generic/Shared Routes ---
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
-export const respondToDiscordLink = (messageId, response, token) => apiRequest('/core/discord/respond-link', 'POST', { messageId, response }, token);
-export const getTranscript = (duelId, token) => apiRequest(`/transcripts/${duelId}`, 'GET', null, token);
+export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
+export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`, 'GET', null, null);
 
 // --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
@@ -96,6 +105,6 @@ export const approvePayoutRequest = (requestId, token) => apiRequest(`/payouts/r
 export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/payouts/requests/${requestId}/decline`, 'POST', { reason }, token);
 export const getSystemStatus = (token) => apiRequest('/admin/system-status', 'GET', null, token);
 export const updateSystemStatus = (statusData, token) => apiRequest('/admin/system-status', 'PUT', statusData, token);
-export const createRivalsTournament = (tournamentData, token) => apiRequest('/admin/games/rivals/tournaments', 'POST', tournamentData, token);
+export const createRivalsTournament = (tournamentData, token) => apiRequest(`${RIVALS_PREFIX}/admin/tournaments`, 'POST', tournamentData, token);
 export const getAdminDisputes = (token) => apiRequest('/admin/disputes', 'GET', null, token);
 export const resolveDispute = (disputeId, resolutionType, token) => apiRequest(`/admin/disputes/${disputeId}/resolve`, 'POST', { resolutionType }, token);
