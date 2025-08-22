@@ -107,6 +107,31 @@ router.post('/:id/dispute', authenticateToken, param('id').isInt(), body('reason
     }
 });
 
+router.get('/find-player', authenticateToken, query('roblox_username').trim().notEmpty(), handleValidationErrors, async (req, res) => {
+    try {
+        const { roblox_username } = req.query;
+        const sql = `
+            SELECT 
+                ugp.user_id, 
+                ugp.linked_game_username, 
+                ugp.avatar_url 
+            FROM user_game_profiles ugp
+            WHERE ugp.game_id = $1 
+              AND ugp.linked_game_username ILIKE $2 
+              AND ugp.user_id != $3
+        `;
+        const { rows: [player] } = await db.query(sql, [RIVALS_GAME_ID, roblox_username, req.user.userId]);
+        
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found or you searched for yourself.' });
+        }
+        res.status(200).json(player);
+    } catch(err) {
+        console.error("Find Rivals Player Error:", err.message);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    }
+});
+
 router.post('/challenge', authenticateToken,
     body('opponent_id').isUUID(), body('wager').isInt({ gt: 0 }),
     body('rules.map').trim().escape().notEmpty(),
