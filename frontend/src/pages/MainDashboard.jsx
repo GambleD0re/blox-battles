@@ -37,7 +37,13 @@ const MainDashboard = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
+        // [FIX] Add a guard clause to ensure the token exists before fetching.
+        if (!token) {
+            return;
+        }
+
         const fetchGames = async () => {
+            setIsLoading(true);
             try {
                 const gamesData = await api.getGames(token);
                 setGames(gamesData);
@@ -65,9 +71,11 @@ const MainDashboard = () => {
                         </div>
                     ) : (
                         <div className="flex gap-6 overflow-x-auto pb-4">
-                            {games.map(game => (
-                                <GameCard key={game.id} game={game} />
-                            ))}
+                            {games.length > 0 ? (
+                                games.map(game => <GameCard key={game.id} game={game} />)
+                            ) : (
+                                <p className="text-gray-500 text-center w-full">No games are currently available.</p>
+                            )}
                         </div>
                     )}
                 </div>
