@@ -14,6 +14,7 @@ const statusRoutes = require('./status.js');
 const ticketRoutes = require('./tickets.js');
 const transcriptRoutes = require('./transcripts.js');
 const duelHistoryRoutes = require('./duelHistory.js');
+const taskRoutes = require('./tasks.js');
 
 // Game-specific routes for Rivals
 const rivalsDuelRoutes = require('../games/rivals/routes/rivalsDuels.js');
@@ -37,6 +38,7 @@ router.use('/status', statusRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/transcripts', transcriptRoutes);
 router.use('/duel-history', duelHistoryRoutes);
+router.use('/tasks', taskRoutes);
 
 router.get('/games', async (req, res) => {
     try {
