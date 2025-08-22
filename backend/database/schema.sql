@@ -1,12 +1,17 @@
 -- backend/database/schema.sql
+-- This script defines the PostgreSQL-compatible structure of the database.
+
+-- Drop tables if they exist to ensure a clean slate. The CASCADE keyword will also drop dependent objects.
 DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, gem_purchases, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries CASCADE;
 
+-- Table to manage the on/off status of site features.
 CREATE TABLE system_status (
     feature_name VARCHAR(50) PRIMARY KEY,
     is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     disabled_message TEXT
 );
 
+-- Table to define the games available on the platform.
 CREATE TABLE games (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -15,6 +20,7 @@ CREATE TABLE games (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+-- Create the 'users' table with the new is_username_set flag.
 CREATE TABLE users (
     user_index SERIAL PRIMARY KEY,
     id UUID NOT NULL UNIQUE,
@@ -31,6 +37,7 @@ CREATE TABLE users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     password_last_updated TIMESTAMP WITH TIME ZONE,
     discord_notifications_enabled BOOLEAN DEFAULT TRUE,
+    accepting_challenges BOOLEAN NOT NULL DEFAULT TRUE,
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'banned', 'terminated')),
     ban_applied_at TIMESTAMP WITH TIME ZONE,
     ban_expires_at TIMESTAMP WITH TIME ZONE,
@@ -43,6 +50,7 @@ CREATE TABLE users (
     last_queue_leave_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Table linking users to games and storing their game-specific profiles and stats.
 CREATE TABLE user_game_profiles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     game_id VARCHAR(50) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -52,13 +60,13 @@ CREATE TABLE user_game_profiles (
     losses INTEGER DEFAULT 0,
     avatar_url TEXT,
     verification_phrase TEXT,
-    accepting_challenges BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, game_id),
     UNIQUE (game_id, linked_game_username),
     UNIQUE (game_id, linked_game_id)
 );
 
+-- Use NUMERIC for financial values and JSONB for JSON data.
 CREATE TABLE crypto_deposits (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -80,7 +88,7 @@ CREATE TABLE gem_purchases (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
     stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
     gem_amount BIGINT NOT NULL,
-    amount_paid INTEGER NOT NULL,
+    amount_paid INTEGER NOT NULL, -- In cents
     currency VARCHAR(10) NOT NULL,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
