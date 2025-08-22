@@ -168,6 +168,53 @@ router.post('/challenge', authenticateToken,
     }
 );
 
+// [ADDED] Endpoint to respond to a duel
+router.post('/:id/respond', authenticateToken, param('id').isInt(), body('response').isIn(['accept', 'decline']), handleValidationErrors, async (req, res) => {
+    const duelId = req.params.id;
+    const { response } = req.body;
+    const opponentId = req.user.userId;
+    const client = await db.getPool().connect();
+    try {
+        await client.query('BEGIN');
+        const { rows: [duel] } = await client.query("SELECT * FROM duels WHERE id = $1 AND opponent_id = $2 AND status = 'pending' AND game_id = $3 FOR UPDATE", [duelId, opponentId, RIVALS_GAME_ID]);
+        if (!duel) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Duel not found or you are not the opponent.' }); }
+
+        if (response === 'decline') {
+            await client.query('UPDATE duels SET status = $1 WHERE id = $2', ['declined', duelId]);
+            await client.query('COMMIT');
+            sendInboxRefresh(duel.challenger_id);
+            return res.status(200).json({ message: 'Duel declined.' });
+        } 
+        
+        const { rows: [opponent] } = await client.query('SELECT gems FROM users WHERE id = $1 FOR UPDATE', [opponentId]);
+        const { rows: [challenger] } = await client.query('SELECT gems FROM users WHERE id = $1 FOR UPDATE', [duel.challenger_id]);
+
+        if (parseInt(opponent.gems) < parseInt(duel.wager)) { await client.query('ROLLBACK'); return res.status(400).json({ message: 'You do not have enough gems.' }); }
+        if (parseInt(challenger.gems) < parseInt(duel.wager)) { await client.query('ROLLBACK'); return res.status(400).json({ message: 'The challenger no longer has enough gems.' }); }
+
+        await client.query('UPDATE users SET gems = gems - $1 WHERE id = $2', [duel.wager, opponentId]);
+        await client.query('UPDATE users SET gems = gems - $1 WHERE id = $2', [duel.wager, duel.challenger_id]);
+        
+        const totalPot = parseInt(duel.wager) * 2;
+        const TAX_RATE_DIRECT = parseFloat(process.env.TAX_RATE_DIRECT || '0.01');
+        const taxCollected = Math.ceil(totalPot * TAX_RATE_DIRECT);
+        const finalPot = totalPot - taxCollected;
+        
+        await client.query('UPDATE duels SET status = $1, accepted_at = NOW(), pot = $2, tax_collected = $3 WHERE id = $4', ['accepted', finalPot, taxCollected, duelId]);
+        
+        await client.query('COMMIT');
+        sendInboxRefresh(duel.challenger_id);
+        res.status(200).json({ message: 'Duel accepted! You can now start the match from your inbox.' });
+    } catch(err) {
+        await client.query('ROLLBACK');
+        console.error("Respond to Rivals Duel Error:", err.message);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    } finally {
+        client.release();
+    }
+});
+
+
 router.post('/:id/start', authenticateToken, param('id').isInt(), handleValidationErrors, async (req, res) => {
     const duelId = req.params.id;
     const userId = req.user.userId;
