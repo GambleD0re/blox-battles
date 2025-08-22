@@ -2,16 +2,17 @@
 const express = require('express');
 const db = require('../../database/database');
 const { authenticateToken } = require('../../middleware/auth');
-const rivalsGameData = require('../../games/rivals/data/rivalsGameData'); // Specific for Rivals duel data
+const rivalsGameData = require('../../games/rivals/data/rivalsGameData');
 
 const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
+    const client = await db.getPool().connect();
     let notifications = [];
 
     try {
-        // Fetch Rivals duels
+        // 1. Fetch Rivals duels
         const duelsSql = `
             SELECT 
                 d.id, d.wager, d.status, d.challenger_id, d.server_invite_link, d.game_specific_rules, d.created_at,
@@ -25,7 +26,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 (d.challenger_id = $1 OR d.opponent_id = $1) AND
                 d.status IN ('pending', 'accepted', 'started', 'under_review')
         `;
-        const { rows: duels } = await db.query(duelsSql, [userId]);
+        const { rows: duels } = await client.query(duelsSql, [userId]);
         
         const duelNotifications = duels.map(duel => {
             const mapInfo = rivalsGameData.maps.find(m => m.id === duel.game_specific_rules.map);
@@ -43,8 +44,37 @@ router.get('/', authenticateToken, async (req, res) => {
             };
         });
         notifications.push(...duelNotifications);
+        
+        // [ADDED] 2. Fetch pending and approved withdrawal requests
+        const withdrawalsSql = `
+            SELECT id, amount_gems, status, created_at FROM payout_requests
+            WHERE user_id = $1 AND status IN ('awaiting_approval', 'approved')
+        `;
+        const { rows: withdrawals } = await client.query(withdrawalsSql, [userId]);
+        withdrawals.forEach(req => {
+            notifications.push({
+                id: `withdrawal-${req.id}`,
+                type: 'withdrawal_request',
+                timestamp: req.created_at,
+                data: req
+            });
+        });
 
-        // Fetch other global notifications (withdrawals, etc.) in the future here
+        // [ADDED] 3. Fetch unread inbox messages (admin, discord link, etc.)
+        const messagesSql = `
+            SELECT id, type, title, message, reference_id, created_at FROM inbox_messages
+            WHERE user_id = $1 AND is_read = FALSE
+        `;
+        const { rows: messages } = await client.query(messagesSql, [userId]);
+        messages.forEach(msg => {
+            notifications.push({
+                id: `message-${msg.id}`,
+                type: msg.type,
+                timestamp: msg.created_at,
+                data: msg
+            });
+        });
+
 
         notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         res.status(200).json(notifications);
@@ -52,6 +82,8 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error("Fetch Inbox Error:", err.message);
         res.status(500).json({ message: 'An internal server error occurred while fetching your inbox.' });
+    } finally {
+        client.release();
     }
 });
 
