@@ -24,7 +24,7 @@ const RivalsPlayerHeader = ({ user, rivalsProfile, onMenuClick }) => {
                 <img src={rivalsProfile.avatar_url || 'https://placehold.co/60x60/161b22/7d8590?text=R'} alt="Avatar" className="player-avatar !w-16 !h-16" />
                 <div>
                     <h1 className="player-name !text-2xl">{rivalsProfile.linked_game_username}</h1>
-                    <p className="player-id !text-xs">BloxBattles: {user.username}</p>
+                    <p className="player-id !text-xs">BloxBattles ID: {user.id}</p> {/* [FIXED] Correctly displays the user's UUID */}
                 </div>
             </div>
             <div className="player-stats">
