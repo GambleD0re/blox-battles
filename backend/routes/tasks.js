@@ -6,7 +6,7 @@ const { handleValidationErrors, authenticateBot } = require('../middleware/auth'
 
 const router = express.Router();
 
-router.get('/:serverId', 
+router.get('/bot/roblox/:serverId', 
     authenticateBot,
     param('serverId').matches(/^[A-Z]{2,3}(?:-[A-Za-z]+)?_[0-9]+$/).withMessage('Invalid serverId format.'),
     handleValidationErrors,
@@ -55,6 +55,7 @@ router.get('/bot/discord', authenticateBot, async (req, res) => {
             WHERE status = 'pending'
               AND task_type IN (
                   'CREATE_TICKET_CHANNEL',
+                  'CLOSE_TICKET',
                   'POST_DUEL_RESULT_TO_DISCORD', 
                   'SEND_DISCORD_LINK_SUCCESS_DM',
                   'SEND_DUEL_CHALLENGE_DM',
