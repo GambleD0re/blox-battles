@@ -7,6 +7,7 @@ const paymentsRoutes = require('../core/routes/payments.js');
 const payoutRoutes = require('../core/routes/payouts.js');
 const configRoutes = require('../core/routes/config.js');
 const inboxRoutes = require('../core/routes/inbox.js');
+const discordRoutes = require('../core/routes/discord.js');
 const adminRoutes = require('./admin.js');
 const statusRoutes = require('./status.js');
 const ticketRoutes = require('./tickets.js');
@@ -28,13 +29,13 @@ router.use('/payments', paymentsRoutes);
 router.use('/payouts', payoutRoutes);
 router.use('/config', configRoutes);
 router.use('/inbox', inboxRoutes);
+router.use('/discord', discordRoutes);
 router.use('/admin', adminRoutes);
 router.use('/status', statusRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/transcripts', transcriptRoutes);
 router.use('/duel-history', duelHistoryRoutes);
 
-// [FIX] This route is now an async function to properly handle the database query.
 router.get('/games', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT id, name, description, icon_url FROM games WHERE is_active = TRUE');
