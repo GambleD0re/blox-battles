@@ -8,6 +8,18 @@ const { sendInboxRefresh } = require('../core/services/notificationService');
 
 const router = express.Router();
 
+const decrementPlayerCount = async (client, duelId) => {
+    try {
+        const { rows: [duel] } = await client.query('SELECT assigned_server_id FROM duels WHERE id = $1', [duelId]);
+        if (duel && duel.assigned_server_id) {
+            await client.query('UPDATE game_servers SET player_count = GREATEST(0, player_count - 2) WHERE server_id = $1', [duel.assigned_server_id]);
+            console.log(`[PlayerCount] Decremented player count for server ${duel.assigned_server_id} from duel ${duelId} via admin action.`);
+        }
+    } catch (err) {
+        console.error(`[PlayerCount] Failed to decrement player count for duel ${duelId}:`, err);
+    }
+};
+
 router.get('/system-status', authenticateToken, isMasterAdmin, async (req, res) => {
     try {
         const { rows } = await db.query('SELECT feature_name, is_enabled, disabled_message FROM system_status ORDER BY feature_name');
@@ -76,6 +88,39 @@ router.get('/payout-requests', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+router.get('/users/:userId/details-for-payout/:payoutId', authenticateToken, isAdmin, param('userId').isUUID(), param('payoutId').isUUID(), handleValidationErrors, async (req, res) => {
+    const { userId, payoutId } = req.params;
+    try {
+        const userSql = `SELECT id, email, username, gems, created_at FROM users WHERE id = $1`;
+        const { rows: [user] } = await db.query(userSql, [userId]);
+        if (!user) return res.status(404).json({ message: 'User not found.' });
+
+        const payoutSql = `SELECT amount_gems FROM payout_requests WHERE id = $1 AND user_id = $2`;
+        const { rows: [payoutRequest] } = await db.query(payoutSql, [payoutId, userId]);
+        if (!payoutRequest) return res.status(404).json({ message: 'Associated payout request not found.' });
+        
+        const duelHistorySql = `
+            SELECT d.id, d.wager, d.winner_id, d.status, d.tax_collected, g.name as game_name,
+                   (SELECT wins FROM user_game_profiles WHERE user_id = $1 AND game_id = d.game_id) as wins,
+                   (SELECT losses FROM user_game_profiles WHERE user_id = $1 AND game_id = d.game_id) as losses
+            FROM duels d
+            JOIN games g ON d.game_id = g.id
+            WHERE (d.challenger_id = $1 OR d.opponent_id = $1) AND d.status IN ('completed', 'under_review', 'cheater_forfeit')
+            ORDER BY d.created_at DESC
+            LIMIT 50
+        `;
+        const { rows: duelHistory } = await db.query(duelHistorySql, [userId]);
+
+        res.status(200).json({
+            user: { ...user, balanceBeforeRequest: parseInt(user.gems) + parseInt(payoutRequest.amount_gems), balanceAfterRequest: user.gems },
+            duelHistory: duelHistory
+        });
+    } catch (err) {
+        console.error("Admin fetch user details for payout error:", err);
+        res.status(500).json({ message: 'Failed to fetch comprehensive user details.' });
+    }
+});
+
 router.post('/payouts/requests/:id/approve', authenticateToken, isAdmin, param('id').isUUID(), handleValidationErrors, async (req, res) => {
     const requestId = req.params.id;
     const client = await db.getPool().connect();
@@ -127,6 +172,82 @@ router.post('/payouts/requests/:id/decline', authenticateToken, isAdmin, param('
         await client.query('ROLLBACK');
         console.error("Admin decline payout error:", err);
         res.status(500).json({ message: 'Failed to decline request.' });
+    } finally {
+        client.release();
+    }
+});
+
+router.get('/disputes', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                d.id, d.duel_id, d.reason, d.has_video_evidence, d.created_at, 
+                g.name as game_name,
+                reporter_profile.linked_game_username as reporter_username,
+                reported_profile.linked_game_username as reported_username
+            FROM disputes d
+            JOIN duels du ON d.duel_id = du.id
+            JOIN games g ON du.game_id = g.id
+            JOIN user_game_profiles reporter_profile ON d.reporter_id = reporter_profile.user_id AND du.game_id = reporter_profile.game_id
+            JOIN user_game_profiles reported_profile ON d.reported_id = reported_profile.user_id AND du.game_id = reported_profile.game_id
+            WHERE d.status = 'pending' 
+            ORDER BY d.created_at ASC
+        `;
+        const { rows: disputes } = await db.query(sql);
+        res.status(200).json(disputes);
+    } catch (err) {
+        console.error("Admin fetch disputes error:", err);
+        res.status(500).json({ message: 'Failed to fetch disputes.' });
+    }
+});
+
+router.post('/disputes/:id/resolve', authenticateToken, isAdmin, param('id').isInt(), body('resolutionType').isIn(['uphold_winner', 'overturn_to_reporter', 'void_refund']), handleValidationErrors, async (req, res) => {
+    const disputeId = req.params.id;
+    const adminId = req.user.userId;
+    const { resolutionType } = req.body;
+    const client = await db.getPool().connect();
+    try {
+        await client.query('BEGIN');
+        const { rows: [dispute] } = await client.query("SELECT * FROM disputes WHERE id = $1 AND status != 'resolved' FOR UPDATE", [disputeId]);
+        if (!dispute) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Dispute not found or already resolved.' }); }
+        
+        const { rows: [duel] } = await client.query('SELECT * FROM duels WHERE id = $1 FOR UPDATE', [dispute.duel_id]);
+        if (!duel) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Associated duel not found.' }); }
+
+        let resolutionMessage = '';
+        switch (resolutionType) {
+            case 'uphold_winner':
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.pot, duel.winner_id]);
+                const loserId = duel.winner_id.toString() === duel.challenger_id.toString() ? duel.opponent_id : duel.challenger_id;
+                await client.query('UPDATE user_game_profiles SET wins = wins + 1 WHERE user_id = $1 AND game_id = $2', [duel.winner_id, duel.game_id]);
+                await client.query('UPDATE user_game_profiles SET losses = losses + 1 WHERE user_id = $1 AND game_id = $2', [loserId, duel.game_id]);
+                resolutionMessage = `Winner upheld. Pot of ${duel.pot} paid to original winner.`;
+                break;
+            case 'overturn_to_reporter':
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.pot, dispute.reporter_id]);
+                await client.query('UPDATE user_game_profiles SET wins = wins + 1 WHERE user_id = $1 AND game_id = $2', [dispute.reporter_id, duel.game_id]);
+                await client.query('UPDATE user_game_profiles SET losses = losses + 1 WHERE user_id = $1 AND game_id = $2', [dispute.reported_id, duel.game_id]);
+                await client.query('UPDATE duels SET winner_id = $1 WHERE id = $2', [dispute.reporter_id, duel.id]);
+                resolutionMessage = `Result overturned. Pot of ${duel.pot} paid to reporter.`;
+                break;
+            case 'void_refund':
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.wager, duel.challenger_id]);
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.wager, duel.opponent_id]);
+                await client.query('UPDATE duels SET tax_collected = 0 WHERE id = $1', [duel.id]);
+                resolutionMessage = `Duel voided. Wager of ${duel.wager} refunded to both players.`;
+                break;
+        }
+        await client.query("UPDATE duels SET status = 'completed' WHERE id = $1", [duel.id]);
+        await client.query("UPDATE disputes SET status = 'resolved', resolution = $1, resolved_at = NOW(), admin_resolver_id = $2 WHERE id = $3", [resolutionMessage, adminId, disputeId]);
+        
+        await decrementPlayerCount(client, duel.id);
+
+        await client.query('COMMIT');
+        res.status(200).json({ message: 'Dispute resolved successfully.' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Admin Resolve Dispute Error:`, err);
+        res.status(500).json({ message: 'An internal server error occurred.' });
     } finally {
         client.release();
     }
