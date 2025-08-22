@@ -6,6 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
+const jwt = require('jsonwebtoken'); // [FIX] Added the missing JWT import
 const db = require('./database/database');
 const crypto = require('crypto');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -57,7 +58,6 @@ passport.use(new GoogleStrategy({
         }
 
         const newUserId = crypto.randomUUID();
-        // Create a provisional username that is guaranteed to be unique
         const provisionalUsername = `user_${newUserId.substring(0, 8)}`;
         
         await db.query(
@@ -73,20 +73,25 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-// Update the final JWT creation to include the new flag
-const originalCallback = passport.authenticate('google', { failureRedirect: '/', session: false });
-app.use('/api/auth/google/callback', originalCallback, (req, res) => {
+const googleAuthMiddleware = passport.authenticate('google', { failureRedirect: '/', session: false });
+
+// This route structure was slightly incorrect. Corrected for clarity and stability.
+const authRouter = express.Router();
+authRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+authRouter.get('/google/callback', googleAuthMiddleware, (req, res) => {
     const user = req.user;
     const payload = {
         userId: user.id,
         username: user.username,
         isAdmin: user.is_admin,
-        is_username_set: user.is_username_set, // Include the new flag
+        is_username_set: user.is_username_set,
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
     const frontendUrl = process.env.SERVER_URL || 'http://localhost:3000';
     res.redirect(`${frontendUrl}/?token=${token}`);
 });
+
+app.use('/api/auth', authRouter); // Mount the mini-router for auth
 
 const apiRoutes = require('./routes');
 app.use('/api', botLogger, apiRoutes);
