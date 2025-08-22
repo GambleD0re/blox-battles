@@ -50,7 +50,7 @@ const getProviders = () => {
 
 const fetchPricesFromChainlink = async () => {
   const provs = getProviders();
-  if (!provs) return; // Stop if providers failed to initialize
+  if (!provs) return;
 
   console.log("[PriceFeed LOG] Fetching prices from Chainlink...");
 
@@ -58,10 +58,10 @@ const fetchPricesFromChainlink = async () => {
     const provider = provs[cfg.network];
     try {
       const contract = new ethers.Contract(cfg.address, AGGREGATORV3_ABI, provider);
-      // [FIX] Add a timeout to the RPC calls to prevent hangs
-      const decimals = await Promise.race([contract.decimals(), new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))]);
-      const roundData = await Promise.race([contract.latestRoundData(), new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))]);
-      
+      const [decimals, roundData] = await Promise.all([
+        Promise.race([contract.decimals(), new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))]),
+        Promise.race([contract.latestRoundData(), new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))])
+      ]);
       const price = Number(ethers.formatUnits(roundData.answer, decimals));
       return { symbol, price };
     } catch (error) {
@@ -82,19 +82,19 @@ const initializePriceFeed = async () => {
     await fetchPricesFromChainlink();
   } catch (e) {
     console.error(`[PriceFeed ERROR] Initialization failed: ${e.message}`);
-    hasInitializationFailed = true; // Prevent further attempts
+    hasInitializationFailed = true;
   }
 };
 
 const getLatestPrice = async (priceSymbol) => {
   const now = Date.now();
-  if (now - lastFetchTimestamp > CACHE_DURATION_MS || !priceCache[priceSymbol] || priceCache[priceSymbol] === 0) {
-    await initializePriceFeed();
+  if (!priceCache[priceSymbol] || priceCache[priceSymbol] === 0 || now - lastFetchTimestamp > CACHE_DURATION_MS) {
+    await fetchPricesFromChainlink();
   }
   return priceCache[priceSymbol] || 0;
 };
 
 module.exports = {
   getLatestPrice,
-  initializePriceFeed, // Exported but no longer called on startup
+  initializePriceFeed,
 };
