@@ -6,7 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const jwt = require('jsonwebtoken'); // [FIX] Added the missing JWT import
+const jwt = require('jsonwebtoken');
 const db = require('./database/database');
 const crypto = require('crypto');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -75,10 +75,8 @@ passport.use(new GoogleStrategy({
 
 const googleAuthMiddleware = passport.authenticate('google', { failureRedirect: '/', session: false });
 
-// This route structure was slightly incorrect. Corrected for clarity and stability.
-const authRouter = express.Router();
-authRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-authRouter.get('/google/callback', googleAuthMiddleware, (req, res) => {
+app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/api/auth/google/callback', googleAuthMiddleware, (req, res) => {
     const user = req.user;
     const payload = {
         userId: user.id,
@@ -91,8 +89,6 @@ authRouter.get('/google/callback', googleAuthMiddleware, (req, res) => {
     res.redirect(`${frontendUrl}/?token=${token}`);
 });
 
-app.use('/api/auth', authRouter); // Mount the mini-router for auth
-
 const apiRoutes = require('./routes');
 app.use('/api', botLogger, apiRoutes);
 
@@ -100,6 +96,7 @@ const wss = initializeWebSocket(server);
 
 server.listen(PORT, async () => {
     console.log(`Backend API server started on port: ${PORT}`);
+    initializePriceFeed();
     startTransactionListener();
     startConfirmationService();
     startGhostFeed(wss);
