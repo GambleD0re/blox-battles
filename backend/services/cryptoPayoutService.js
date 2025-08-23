@@ -23,23 +23,40 @@ const ERC20_ABI = [
 let provider;
 let wallet;
 let isInitialized = false;
+let isInitializing = false;
 
-async function ensureInitialized() {
-    if (isInitialized) {
+async function ensureInitialized(maxRetries = 5, retryDelay = 5000) {
+    if (isInitialized) return;
+    if (isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait if another process is already initializing
         return;
     }
+    isInitializing = true;
+
     if (!ALCHEMY_POLYGON_URL || !PAYOUT_WALLET_PRIVATE_KEY) {
+        isInitializing = false;
         throw new Error("Missing required crypto environment variables for payout service.");
     }
-    try {
-        provider = new ethers.JsonRpcProvider(ALCHEMY_POLYGON_URL);
-        wallet = new ethers.Wallet(PAYOUT_WALLET_PRIVATE_KEY, provider);
-        isInitialized = true;
-        console.log(`Crypto Payout Service Initialized. Wallet Address: ${wallet.address}`);
-    } catch (error) {
-        isInitialized = false;
-        console.error("Failed to initialize Crypto Payout Service:", error);
-        throw new Error("Could not connect to the blockchain network.");
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const tempProvider = new ethers.JsonRpcProvider(ALCHEMY_POLYGON_URL);
+            await tempProvider.getBlockNumber(); // Verify connection
+            
+            provider = tempProvider;
+            wallet = new ethers.Wallet(PAYOUT_WALLET_PRIVATE_KEY, provider);
+            isInitialized = true;
+            isInitializing = false;
+            console.log(`[PayoutService] Initialized. Wallet Address: ${wallet.address} (Attempt ${attempt})`);
+            return;
+        } catch (error) {
+            console.warn(`[PayoutService] Initialization attempt ${attempt} failed: ${error.message}`);
+            if (attempt === maxRetries) {
+                isInitializing = false;
+                throw new Error("Could not connect to the blockchain network after multiple retries.");
+            }
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
     }
 }
 
