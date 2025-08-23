@@ -79,9 +79,9 @@ export const getRivalsUnseenResults = (token) => apiRequest(`${RIVALS_PREFIX}/du
 export const confirmRivalsDuelResult = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/confirm-result`, 'POST', null, token);
 export const fileRivalsDispute = (duelId, disputeData, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/dispute`, 'POST', disputeData, token);
 export const startRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/duels/${duelId}/start`, 'POST', null, token);
-export const getQueueStatus = (token) => apiRequest(`${RIVALS_PREFIX}/queue/status`, 'GET', null, token);
-export const joinQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX}/queue/join`, 'POST', queueData, token);
-export const leaveQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
+export const getRivalsQueueStatus = (token) => apiRequest(`${RIVALS_PREFIX}/queue/status`, 'GET', null, token);
+export const joinRivalsQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX}/queue/join`, 'POST', queueData, token);
+export const leaveRivalsQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
 
 // --- Generic/Shared Routes ---
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
