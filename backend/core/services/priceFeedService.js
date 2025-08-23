@@ -23,10 +23,10 @@ const TOKEN_CONFIG = {
   PYUSD_USD_ETHEREUM:{ address: "0x243932a2411855a4ea37346231a5a46c49ab1730", network: "ethereum" }
 };
 
-const initializeWithRetries = async (maxRetries = 5, retryDelay = 5000) => {
+const initializeWithRetries = async (maxRetries = 5, retryDelay = 500000) => {
     if (providers) return providers;
     if (isInitializing) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000000));
         return providers;
     }
     isInitializing = true;
