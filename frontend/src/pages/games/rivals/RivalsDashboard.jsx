@@ -42,14 +42,13 @@ const RivalsDashboard = () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            // [MODIFIED] Proactively refresh the game profile on every load of this dashboard
             await refreshGameProfile('rivals'); 
             
             const [inboxData, gameData, resultsData, queueData] = await Promise.all([
                 api.getInbox(token),
                 api.getRivalsGameData(token),
                 api.getRivalsUnseenResults(token),
-                api.getQueueStatus(token)
+                api.getRivalsQueueStatus(token)
             ]);
             setInbox(inboxData.filter(n => n.game_id === 'rivals' || !n.game_id));
             setGameData(gameData);
@@ -133,7 +132,7 @@ const RivalsDashboard = () => {
 
     const handleQueueJoined = async () => {
         setQueueModalOpen(false);
-        const status = await api.getQueueStatus(token);
+        const status = await api.getRivalsQueueStatus(token);
         setQueueStatus(status);
     };
     
