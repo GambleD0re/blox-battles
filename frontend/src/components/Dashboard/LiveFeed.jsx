@@ -44,7 +44,6 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
         });
     };
     
-    // [FIXED] Re-implementing the state update logic to be more declarative and prevent race conditions.
     const onNewDuel = (duelData) => {
         const newDuel = { key: `duel-${duelData.id}-${Date.now()}`, position: 'enter', data: duelData };
         setDuels(currentDuels => [
@@ -66,7 +65,9 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
             ws.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'live_feed_history') {
-                    setDuels(data.payload.map((duelData, i) => ({ key: `hist-${duelData.id}`, position: i === 0 ? 'slot1' : 'slot2', data: duelData })));
+                    // [FIXED] Only take the first two duels from history to prevent stacking on reload
+                    const displayableHistory = data.payload.slice(0, 2);
+                    setDuels(displayableHistory.map((duelData, i) => ({ key: `hist-${duelData.id}`, position: i === 0 ? 'slot1' : 'slot2', data: duelData })));
                 } else if (data.type === 'live_feed_update') {
                     onNewDuel(data.payload);
                 } else if (data.type === 'match_found' && onMatchFound) {
