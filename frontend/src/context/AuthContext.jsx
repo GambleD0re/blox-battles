@@ -25,14 +25,34 @@ export const AuthProvider = ({ children }) => {
     const fetchAndSetAllData = useCallback(async (tokenToUse) => {
         try {
             const decoded = jwtDecode(tokenToUse);
-            const [statusData, configData, userData] = await Promise.all([
+            const [statusData, configData, userData, gamesData] = await Promise.all([
                 api.getFeatureStatus(),
                 api.getAppConfig(),
-                api.getCoreUserData(tokenToUse)
+                api.getCoreUserData(tokenToUse),
+                api.getGames(tokenToUse) // Fetch available games
             ]);
             setSystemStatus(statusData);
             setAppConfig(configData);
             setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set });
+
+            // [FIX] After setting the core user, fetch all their game profiles
+            const profilePromises = gamesData.map(game => {
+                if (game.id === 'rivals') {
+                    return api.getRivalsGameProfile(tokenToUse).then(profile => ({ gameId: 'rivals', profile }));
+                }
+                // In the future, other game profile fetches would be added here
+                return Promise.resolve(null);
+            });
+
+            const profilesResults = await Promise.allSettled(profilePromises);
+            const newGameProfiles = {};
+            profilesResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    newGameProfiles[result.value.gameId] = result.value.profile;
+                }
+            });
+            setGameProfiles(newGameProfiles);
+
         } catch (error) {
             console.error("Failed to fetch initial data, logging out.", error);
             logout();
