@@ -40,7 +40,7 @@ const QueueConfigForm = ({ gameData, token, showMessage, onQueueJoined }) => {
                     banned_weapons: bannedWeapons
                 }
             };
-            await api.joinQueue(queueData, token);
+            await api.joinRivalsQueue(queueData, token);
             showMessage('You have joined the queue!', 'success');
             onQueueJoined();
         } catch (error) {
