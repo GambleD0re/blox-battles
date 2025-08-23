@@ -28,8 +28,10 @@ const RivalsDashboard = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isChallengeModalOpen, setChallengeModalOpen] = useState(false);
     const [isQueueModalOpen, setQueueModalOpen] = useState(false);
+    const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
     
     const [selectedOpponent, setSelectedOpponent] = useState(null);
+    const [selectedDuel, setSelectedDuel] = useState(null);
 
     const showMessage = (text, type = 'success') => {
         setMessage({ text, type });
@@ -40,7 +42,9 @@ const RivalsDashboard = () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            await refreshGameProfile('rivals');
+            // [MODIFIED] Proactively refresh the game profile on every load of this dashboard
+            await refreshGameProfile('rivals'); 
+            
             const [inboxData, gameData, resultsData, queueData] = await Promise.all([
                 api.getInbox(token),
                 api.getRivalsGameData(token),
@@ -67,12 +71,29 @@ const RivalsDashboard = () => {
         setChallengeModalOpen(true);
     };
 
+    const handleViewDuel = (duel) => {
+        setSelectedDuel(duel);
+        setDetailsModalOpen(true);
+    };
+
     const handleChallengeSubmit = async (challengeData) => {
         try {
             const result = await api.sendRivalsChallenge(challengeData, token);
             showMessage(result.message, 'success');
             setChallengeModalOpen(false);
             fetchRivalsData();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    };
+
+    const handleRespondToDuel = async (duelId, response) => {
+        try {
+            const result = await api.respondToRivalsDuel(duelId, response, token);
+            showMessage(result.message, 'success');
+            setDetailsModalOpen(false);
+            await refreshUser();
+            await fetchRivalsData();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -160,6 +181,7 @@ const RivalsDashboard = () => {
                     <Inbox 
                         notifications={inbox}
                         onStartDuel={handleStartDuel}
+                        onViewDuel={handleViewDuel}
                     />
                 </div>
             </main>
@@ -176,6 +198,13 @@ const RivalsDashboard = () => {
                 gameData={gameData}
                 onChallengeSubmit={handleChallengeSubmit}
                 onError={(msg) => showMessage(msg, 'error')}
+            />
+
+             <DuelDetailsModal 
+                isOpen={isDetailsModalOpen} 
+                onClose={() => setDetailsModalOpen(false)}
+                duel={selectedDuel}
+                onRespond={handleRespondToDuel}
             />
 
             <MatchReadyModal 
