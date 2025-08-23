@@ -18,7 +18,7 @@ const DuelCard = ({ duel }) => {
                 <span className="font-bold text-white text-lg truncate">{winner.username}</span>
             </div>
             <div className="text-center flex-shrink-0 mx-4">
-                <div className="font-black text-2xl text-white">{Object.values(score).join(' - ')}</div>
+                <div className="font-black text-2xl text-white">{score ? Object.values(score).join(' - ') : 'N/A'}</div>
                 <div className="font-bold text-sm text-green-400">{formatGems(pot)} Gems</div>
             </div>
             <div className="flex items-center justify-end gap-3 flex-1 min-w-0">
@@ -47,12 +47,19 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
     const onNewDuel = (duelData) => {
         const newDuel = { key: `duel-${duelData.id}-${Date.now()}`, position: 'enter', data: duelData };
         setDuels(currentDuels => {
-            const updatedDuels = currentDuels.map(d => {
-                if (d.position === 'slot1') return { ...d, position: 'slot2' };
-                if (d.position === 'slot2') return { ...d, position: 'exit' };
-                return d;
-            });
-            return [...updatedDuels, newDuel];
+            const nextState = [];
+            const slot1Duel = currentDuels.find(d => d.position === 'slot1');
+            const slot2Duel = currentDuels.find(d => d.position === 'slot2');
+
+            if (slot2Duel) {
+                nextState.push({ ...slot2Duel, position: 'exit' });
+            }
+            if (slot1Duel) {
+                nextState.push({ ...slot1Duel, position: 'slot2' });
+            }
+            
+            nextState.push(newDuel);
+            return nextState;
         });
     };
 
