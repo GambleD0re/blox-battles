@@ -44,23 +44,16 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
         });
     };
     
+    // [FIXED] Re-implementing the state update logic to be more declarative and prevent race conditions.
     const onNewDuel = (duelData) => {
         const newDuel = { key: `duel-${duelData.id}-${Date.now()}`, position: 'enter', data: duelData };
-        setDuels(currentDuels => {
-            const nextState = [];
-            const slot1Duel = currentDuels.find(d => d.position === 'slot1');
-            const slot2Duel = currentDuels.find(d => d.position === 'slot2');
-
-            if (slot2Duel) {
-                nextState.push({ ...slot2Duel, position: 'exit' });
-            }
-            if (slot1Duel) {
-                nextState.push({ ...slot1Duel, position: 'slot2' });
-            }
-            
-            nextState.push(newDuel);
-            return nextState;
-        });
+        setDuels(currentDuels => [
+            newDuel,
+            ...currentDuels.map(d => {
+                const newPosition = d.position === 'slot1' ? 'slot2' : 'exit';
+                return { ...d, position: newPosition };
+            })
+        ]);
     };
 
     useEffect(() => {
