@@ -5,6 +5,7 @@ let providers;
 let priceCache = {};
 let lastFetchTimestamp = 0;
 let ethers;
+let isInitializing = false;
 let hasInitializationFailed = false;
 
 const AGGREGATORV3_ABI = [
@@ -22,35 +23,55 @@ const TOKEN_CONFIG = {
   PYUSD_USD_ETHEREUM:{ address: "0x243932a2411855a4ea37346231a5a46c49ab1730", network: "ethereum" }
 };
 
-const getProviders = () => {
-  if (providers) return providers;
-  if (hasInitializationFailed) return null;
-  if (!ethers) ethers = require("ethers");
+const initializeWithRetries = async (maxRetries = 5, retryDelay = 5000) => {
+    if (providers) return providers;
+    if (isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return providers;
+    }
+    isInitializing = true;
 
-  const ETHEREUM_URL = process.env.ALCHEMY_ETHEREUM_URL ? process.env.ALCHEMY_ETHEREUM_URL.trim() : null;
-  const POLYGON_URL  = process.env.ALCHEMY_POLYGON_URL ? process.env.ALCHEMY_POLYGON_URL.trim() : null;
+    if (!ethers) ethers = require("ethers");
 
-  if (!ETHEREUM_URL || !POLYGON_URL) {
-    console.error("[PriceFeed FATAL] Missing ALCHEMY_ETHEREUM_URL or ALCHEMY_POLYGON_URL. Price feed will be disabled.");
-    hasInitializationFailed = true;
-    return null;
-  }
+    const ETHEREUM_URL = process.env.ALCHEMY_ETHEREUM_URL ? process.env.ALCHEMY_ETHEREUM_URL.trim() : null;
+    const POLYGON_URL = process.env.ALCHEMY_POLYGON_URL ? process.env.ALCHEMY_POLYGON_URL.trim() : null;
 
-  try {
-    const ethProvider = new ethers.JsonRpcProvider(ETHEREUM_URL);
-    const polyProvider = new ethers.JsonRpcProvider(POLYGON_URL);
-    providers = { ethereum: ethProvider, polygon:  polyProvider };
-    return providers;
-  } catch (error) {
-    console.error("[PriceFeed FATAL] Failed to create JsonRpcProvider. Price feed will be disabled.", error);
-    hasInitializationFailed = true;
-    return null;
-  }
+    if (!ETHEREUM_URL || !POLYGON_URL) {
+        console.error("[PriceFeed FATAL] Missing ALCHEMY_ETHEREUM_URL or ALCHEMY_POLYGON_URL. Price feed will be disabled.");
+        hasInitializationFailed = true;
+        isInitializing = false;
+        return null;
+    }
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const ethProvider = new ethers.JsonRpcProvider(ETHEREUM_URL);
+            const polyProvider = new ethers.JsonRpcProvider(POLYGON_URL);
+            
+            // Perform a simple check to ensure the connection is live
+            await Promise.all([ethProvider.getBlockNumber(), polyProvider.getBlockNumber()]);
+
+            console.log(`[PriceFeed] Successfully connected to providers on attempt ${attempt}.`);
+            providers = { ethereum: ethProvider, polygon: polyProvider };
+            isInitializing = false;
+            return providers;
+        } catch (error) {
+            console.warn(`[PriceFeed] Provider initialization attempt ${attempt} failed: ${error.message}`);
+            if (attempt === maxRetries) {
+                console.error("[PriceFeed FATAL] All provider initialization attempts failed. Price feed will be disabled.");
+                hasInitializationFailed = true;
+                isInitializing = false;
+                return null;
+            }
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
 };
 
+
 const fetchPricesFromChainlink = async () => {
-  const provs = getProviders();
-  if (!provs) return;
+  const provs = await initializeWithRetries();
+  if (!provs || hasInitializationFailed) return;
 
   console.log("[PriceFeed LOG] Fetching prices from Chainlink...");
 
