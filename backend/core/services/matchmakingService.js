@@ -1,8 +1,8 @@
-// backend/services/matchmakingService.js
-const db = require('../database/database');
-const rivalsGameData = require('../games/rivals/data/rivalsGameData');
-const { sendToUser } = require('../webSocketManager');
-const { sendInboxRefresh } = require('../core/services/notificationService');
+// backend/core/services/matchmakingService.js
+const db = require('../../database/database');
+const rivalsGameData = require('../../games/rivals/data/rivalsGameData');
+const { sendToUser } = require('../../webSocketManager');
+const { sendInboxRefresh } = require('../services/notificationService');
 
 const MATCHMAKING_INTERVAL_SECONDS = parseInt(process.env.MATCHMAKING_INTERVAL_SECONDS || '5', 10);
 const TAX_RATE_RANDOM = parseFloat(process.env.TAX_RATE_RANDOM || '0.01');
@@ -49,14 +49,12 @@ const findAndProcessMatches = async () => {
                 await client.query('UPDATE users SET gems = gems - $1 WHERE id = $2', [p2.wager, p2.user_id]);
                 await client.query('DELETE FROM random_queue_entries WHERE user_id = ANY($1::uuid[])', [[p1.user_id, p2.user_id]]);
                 
-                // --- Game-Specific Logic (Rivals) ---
                 const p1Prefs = p1.game_specific_preferences;
                 const p2Prefs = p2.game_specific_preferences;
                 const combinedBans = [...new Set([...(p1Prefs.banned_weapons || []), ...(p2Prefs.banned_weapons || [])])];
                 const availableMaps = rivalsGameData.maps.filter(m => m.id !== p1Prefs.banned_map && m.id !== p2Prefs.banned_map);
                 const selectedMap = availableMaps.length > 0 ? availableMaps[Math.floor(Math.random() * availableMaps.length)] : rivalsGameData.maps[0];
                 const rules = { map: selectedMap.id, banned_weapons: combinedBans, region: p1.region };
-                // --- End Game-Specific Logic ---
                 
                 const totalPot = parseInt(p1.wager) * 2;
                 const taxCollected = Math.ceil(totalPot * TAX_RATE_RANDOM);
