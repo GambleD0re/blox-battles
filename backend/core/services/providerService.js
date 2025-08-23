@@ -9,7 +9,6 @@ const initializeWithRetries = async (maxRetries = 5, retryDelay = 5000) => {
     if (providers) return providers;
     if (hasInitializationFailed) return null;
     
-    // If another call is already trying to initialize, wait for it to finish.
     if (isInitializing) {
         await new Promise(resolve => {
             const interval = setInterval(() => {
@@ -37,9 +36,7 @@ const initializeWithRetries = async (maxRetries = 5, retryDelay = 5000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[ProviderService] Attempt ${attempt}/${maxRetries}: Connecting to blockchain nodes...`);
-            console.log(`[ProviderService]   - Ethereum: ${ETHEREUM_URL.slice(0, 35)}...`);
-            console.log(`[ProviderService]   - Polygon:  ${POLYGON_URL.slice(0, 35)}...`);
-
+            
             const ethProvider = new ethers.JsonRpcProvider(ETHEREUM_URL);
             const polyProvider = new ethers.JsonRpcProvider(POLYGON_URL);
             
@@ -50,6 +47,16 @@ const initializeWithRetries = async (maxRetries = 5, retryDelay = 5000) => {
             isInitializing = false;
             return providers;
         } catch (error) {
+            // [MODIFIED] Check for the specific "403 Forbidden" error from Alchemy
+            if (error.code === 'SERVER_ERROR' && error.info?.responseStatus?.includes('403')) {
+                console.error("[ProviderService] FATAL: Received '403 Forbidden' from Alchemy. The API key or App is inactive.");
+                console.error("[ProviderService] Please update your ALCHEMY_ETHEREUM_URL and ALCHEMY_POLYGON_URL environment variables with a valid key.");
+                console.error("[ProviderService] Halting all retry attempts for blockchain services.");
+                hasInitializationFailed = true;
+                isInitializing = false;
+                return null; // Stop retrying immediately
+            }
+
             console.warn(`[ProviderService] Attempt ${attempt} failed: ${error.message}`);
             if (attempt === maxRetries) {
                 console.error("[ProviderService] FATAL: All provider initialization attempts failed. Blockchain services will be disabled.");
