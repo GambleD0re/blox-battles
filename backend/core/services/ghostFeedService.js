@@ -1,7 +1,7 @@
-// backend/services/ghostFeedService.js
+// backend/core/services/ghostFeedService.js
 const fetch = require('node-fetch');
-const { broadcast } = require('../webSocketManager');
-const db = require('../database/database');
+const { broadcast } = require('../../webSocketManager');
+const db = require('../../database/database');
 
 const GHOST_FEED_INTERVAL = 600000;
 let ghostFeedTimer = null;
@@ -57,7 +57,7 @@ async function generateGhostDuel() {
 
         const duelPayload = {
             id: duelId,
-            gameId: RIVALS_GAME_ID, // Add gameId to the payload
+            gameId: RIVALS_GAME_ID,
             winner: winner,
             loser: loser,
             score: { [winner.username]: 5, [loser.username]: loserScore },
