@@ -19,9 +19,11 @@ const QueueConfigForm = ({ gameData, token, showMessage, onQueueJoined }) => {
             if (prev.includes(weaponId)) {
                 return prev.filter(id => id !== weaponId);
             }
+            // [FIXED] Correctly allow selecting a new weapon if the limit hasn't been reached.
             if (prev.length < 2) {
                 return [...prev, weaponId];
             }
+            // If limit is reached, do nothing (don't add a third weapon).
             return prev;
         });
     };
@@ -56,7 +58,7 @@ const QueueConfigForm = ({ gameData, token, showMessage, onQueueJoined }) => {
                 <label>Wager</label>
                 <div className="flex items-center gap-2">
                     {wagerOptions.map(opt => (
-                        <button key={opt} onClick={() => setWager(opt)} className={`flex-1 p-2 rounded-md border-2 font-semibold transition-all ${wager === opt ? 'border-blue-500 bg-blue-500/20' : 'border-transparent bg-gray-700/50 hover:bg-gray-600/50'}`}>
+                        <button key={opt} type="button" onClick={() => setWager(opt)} className={`flex-1 p-2 rounded-md border-2 font-semibold transition-all ${wager === opt ? 'border-blue-500 bg-blue-500/20' : 'border-transparent bg-gray-700/50 hover:bg-gray-600/50'}`}>
                             {opt}
                         </button>
                     ))}
