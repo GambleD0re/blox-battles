@@ -1,7 +1,7 @@
 // backend/core/services/cryptoPayoutService.js
 const ethers = require('ethers');
+const { getProviders } = require('./providerService');
 
-const ALCHEMY_POLYGON_URL = process.env.ALCHEMY_POLYGON_URL;
 const PAYOUT_WALLET_PRIVATE_KEY = process.env.PAYOUT_WALLET_PRIVATE_KEY;
 
 const SUPPORTED_TOKENS = {
@@ -20,57 +20,39 @@ const ERC20_ABI = [
     "function decimals() view returns (uint8)"
 ];
 
-let provider;
-let wallet;
-let isInitialized = false;
-let isInitializing = false;
+let wallet; // This will be our singleton wallet instance
 
-async function ensureInitialized(maxRetries = 5, retryDelay = 5000) {
-    if (isInitialized) return;
-    if (isInitializing) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait if another process is already initializing
-        return;
-    }
-    isInitializing = true;
+const getWallet = async () => {
+    if (wallet) return wallet;
 
-    if (!ALCHEMY_POLYGON_URL || !PAYOUT_WALLET_PRIVATE_KEY) {
-        isInitializing = false;
-        throw new Error("Missing required crypto environment variables for payout service.");
+    if (!PAYOUT_WALLET_PRIVATE_KEY) {
+        throw new Error("Missing PAYOUT_WALLET_PRIVATE_KEY environment variable for payout service.");
     }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const tempProvider = new ethers.JsonRpcProvider(ALCHEMY_POLYGON_URL);
-            await tempProvider.getBlockNumber(); // Verify connection
-            
-            provider = tempProvider;
-            wallet = new ethers.Wallet(PAYOUT_WALLET_PRIVATE_KEY, provider);
-            isInitialized = true;
-            isInitializing = false;
-            console.log(`[PayoutService] Initialized. Wallet Address: ${wallet.address} (Attempt ${attempt})`);
-            return;
-        } catch (error) {
-            console.warn(`[PayoutService] Initialization attempt ${attempt} failed: ${error.message}`);
-            if (attempt === maxRetries) {
-                isInitializing = false;
-                throw new Error("Could not connect to the blockchain network after multiple retries.");
-            }
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-        }
+    const providers = await getProviders();
+    if (!providers) {
+        throw new Error("Blockchain providers are not available, cannot initialize payout wallet.");
     }
-}
+    
+    wallet = new ethers.Wallet(PAYOUT_WALLET_PRIVATE_KEY, providers.polygon);
+    console.log(`[PayoutService] Payout wallet initialized. Address: ${wallet.address}`);
+    return wallet;
+};
+
 
 async function sendCryptoPayout(recipientAddress, amountUsd, tokenType) {
-    await ensureInitialized();
+    const signer = await getWallet();
     const tokenConfig = SUPPORTED_TOKENS[tokenType];
+
     if (!tokenConfig) {
         throw new Error(`Unsupported token type: ${tokenType}`);
     }
     if (!ethers.isAddress(recipientAddress)) {
         throw new Error("Invalid recipient address provided.");
     }
+
     try {
-        const contract = new ethers.Contract(tokenConfig.contractAddress, ERC20_ABI, wallet);
+        const contract = new ethers.Contract(tokenConfig.contractAddress, ERC20_ABI, signer);
         const decimals = tokenConfig.decimals;
         const amountInSmallestUnit = ethers.parseUnits(amountUsd.toString(), decimals);
 
