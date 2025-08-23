@@ -13,8 +13,8 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { botLogger } = require('./middleware/botLogger');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeWebSocket } = require('./webSocketManager');
-const { startGhostFeed } = require('./services/ghostFeedService');
-const { startMatchmakingService } = require('./services/matchmakingService');
+const { startGhostFeed } = require('./core/services/ghostFeedService');
+const { startMatchmakingService } = require('./core/services/matchmakingService');
 const { initializePriceFeed } = require('./core/services/priceFeedService');
 const { startTransactionListener } = require('./core/services/transactionListenerService');
 const { startConfirmationService } = require('./core/services/transactionConfirmationService');
@@ -32,7 +32,37 @@ app.use(morgan('dev'));
 app.get('/healthz', (req, res) => res.status(200).json({ status: 'ok' }));
 
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    // Webhook logic remains the same
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const { userId, gemAmount } = session.metadata;
+        const sessionId = session.id;
+        const client = await db.getPool().connect();
+        try {
+            await client.query('BEGIN');
+            const { rowCount } = await client.query('SELECT id FROM gem_purchases WHERE stripe_session_id = $1', [sessionId]);
+            if (rowCount > 0) {
+                await client.query('ROLLBACK');
+                return res.status(200).json({ received: true, message: 'Duplicate event.' });
+            }
+            await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [parseInt(gemAmount, 10), userId]);
+            await client.query('INSERT INTO gem_purchases (user_id, stripe_session_id, gem_amount, amount_paid, currency, status) VALUES ($1, $2, $3, $4, $5, $6)', [userId, sessionId, parseInt(gemAmount, 10), session.amount_total, session.currency, 'completed']);
+            await client.query('COMMIT');
+        } catch (dbError) {
+            await client.query('ROLLBACK');
+            return res.status(500).json({ error: 'Database processing failed.' });
+        } finally {
+            client.release();
+        }
+    }
+    res.status(200).json({ received: true });
 });
 
 app.use(express.json());
@@ -72,22 +102,6 @@ passport.use(new GoogleStrategy({
     }
   }
 ));
-
-const googleAuthMiddleware = passport.authenticate('google', { failureRedirect: '/', session: false });
-
-app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-app.get('/api/auth/google/callback', googleAuthMiddleware, (req, res) => {
-    const user = req.user;
-    const payload = {
-        userId: user.id,
-        username: user.username,
-        isAdmin: user.is_admin,
-        is_username_set: user.is_username_set,
-    };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
-    const frontendUrl = process.env.SERVER_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/?token=${token}`);
-});
 
 const apiRoutes = require('./routes');
 app.use('/api', botLogger, apiRoutes);
