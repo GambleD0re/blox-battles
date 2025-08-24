@@ -14,6 +14,7 @@ const SignUpPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [agreedToTerms, setAgreedToTerms] = useState(false); // [ADDED] State for checkbox
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -23,6 +24,10 @@ const SignUpPage = () => {
         setError('');
         if (password !== confirmPassword) {
             setError('Passwords do not match.');
+            return;
+        }
+        if (!agreedToTerms) {
+            setError('You must agree to the Terms of Service and Privacy Policy.');
             return;
         }
         setIsLoading(true);
@@ -62,7 +67,27 @@ const SignUpPage = () => {
                         <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
                         <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="form-input" placeholder="••••••••" />
                     </div>
-                    <button type="submit" disabled={isLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
+
+                    {/* [ADDED] Terms of Service Checkbox */}
+                    <div className="form-group !mb-2">
+                        <label htmlFor="terms-checkbox" className="flex items-start gap-3 cursor-pointer">
+                            <input
+                                id="terms-checkbox"
+                                type="checkbox"
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                required
+                                className="mt-1 h-4 w-4 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-400">
+                                I have read and agree to the{' '}
+                                <Link to="/terms-of-service" target="_blank" className="text-blue-400 hover:underline">Terms of Service</Link> and{' '}
+                                <Link to="/privacy-policy" target="_blank" className="text-blue-400 hover:underline">Privacy Policy</Link>.
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" disabled={isLoading || !agreedToTerms} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
                         {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Account'}
                     </button>
                 </form>
