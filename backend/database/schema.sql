@@ -1,6 +1,4 @@
 -- backend/database/schema.sql
--- This script defines the PostgreSQL-compatible structure of the database.
-
 -- Drop tables if they exist to ensure a clean slate. The CASCADE keyword will also drop dependent objects.
 DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, gem_purchases, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries CASCADE;
 
@@ -274,11 +272,18 @@ CREATE TABLE reaction_roles (
     PRIMARY KEY (message_id, emoji_id)
 );
 
+-- [MODIFIED] New, more granular feature flags
 INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
-('site_wide_maintenance', TRUE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
+('site_wide_maintenance', FALSE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
-('deposits', TRUE, 'All deposit methods are temporarily offline.'),
-('withdrawals', TRUE, 'Withdrawals are temporarily unavailable.');
+('deposits_stripe', TRUE, 'Credit card deposits are temporarily disabled.'),
+('deposits_crypto', TRUE, 'Cryptocurrency deposits are temporarily disabled.'),
+('withdrawals_crypto', TRUE, 'Cryptocurrency withdrawals are temporarily disabled.'),
+('linking_rivals', TRUE, 'Linking new Roblox accounts is temporarily disabled.'),
+('linking_discord', TRUE, 'Linking new Discord accounts is temporarily disabled.'),
+('dueling_rivals_direct', TRUE, 'Direct dueling for Rivals is temporarily disabled.'),
+('dueling_rivals_queue', TRUE, 'The matchmaking queue for Rivals is temporarily disabled.'),
+('tournaments_rivals', TRUE, 'Rivals tournaments are temporarily disabled.');
 
 INSERT INTO games (id, name, description, icon_url, is_active) VALUES
 ('rivals', 'Roblox Rivals', 'The classic 1v1 dueling experience.', '/game-icons/rivals.png', TRUE);
