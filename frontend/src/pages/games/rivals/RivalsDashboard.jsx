@@ -12,7 +12,7 @@ import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
 import { ChallengeModal, DuelDetailsModal, ConfirmationModal, TranscriptModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
 import QueueConfigForm from '../../../components/games/rivals/QueueConfigForm';
-import FeatureGuard from '../../../components/FeatureGuard'; // [ADDED] Import FeatureGuard
+import FeatureGuard from '../../../components/FeatureGuard';
 
 const RivalsDashboard = () => {
     const { user, token, gameProfiles, refreshUser, refreshGameProfile } = useAuth();
@@ -137,8 +137,13 @@ const RivalsDashboard = () => {
         setQueueStatus(status);
     };
     
-    const handleQueueLeft = () => {
-        setQueueStatus(null);
+    const handleQueueLeft = async () => {
+        try {
+            await api.leaveRivalsQueue(token);
+            setQueueStatus(null);
+        } catch(error) {
+            showMessage(error.message, 'error');
+        }
     };
     
     const handleMatchFound = (payload) => {
@@ -170,7 +175,6 @@ const RivalsDashboard = () => {
 
             <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-6">
-                    {/* [MODIFIED] Wrapped components in FeatureGuard */}
                     <FeatureGuard featureName="dueling_rivals_direct">
                         <ChallengePlayer token={token} onChallenge={handleChallengePlayer} />
                     </FeatureGuard>
