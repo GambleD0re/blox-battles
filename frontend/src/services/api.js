@@ -82,7 +82,7 @@ export const startRivalsDuel = (duelId, token) => apiRequest(`${RIVALS_PREFIX}/d
 export const getRivalsQueueStatus = (token) => apiRequest(`${RIVALS_PREFIX}/queue/status`, 'GET', null, token);
 export const joinRivalsQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX}/queue/join`, 'POST', queueData, token);
 export const leaveRivalsQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
-export const getRivalsLeaderboard = (token) => apiRequest(`${RIVALS_PREFIX}/leaderboard`, 'GET', null, token);
+export const getLeaderboard = (gameId, token) => apiRequest(`/games/${gameId}/leaderboard`, 'GET', null, token);
 
 // --- Generic/Shared Routes ---
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
