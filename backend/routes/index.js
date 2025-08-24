@@ -15,6 +15,7 @@ const ticketRoutes = require('./tickets.js');
 const transcriptRoutes = require('./transcripts.js');
 const duelHistoryRoutes = require('./duelHistory.js');
 const taskRoutes = require('./tasks.js');
+const logRoutes = require('./log.js');
 
 // Game-specific routes for Rivals
 const rivalsDuelRoutes = require('../games/rivals/routes/rivalsDuels.js');
@@ -22,6 +23,7 @@ const rivalsQueueRoutes = require('../games/rivals/routes/rivalsQueue.js');
 const rivalsAdminRoutes = require('../games/rivals/routes/rivalsAdmin.js');
 const rivalsProfileRoutes = require('../games/rivals/routes/rivalsProfile.js');
 const rivalsGameDataRoutes = require('../games/rivals/routes/rivalsGameData.js');
+const rivalsLeaderboardRoutes = require('../games/rivals/routes/rivalsLeaderboard.js');
 
 const router = express.Router();
 
@@ -39,6 +41,7 @@ router.use('/tickets', ticketRoutes);
 router.use('/transcripts', transcriptRoutes);
 router.use('/duel-history', duelHistoryRoutes);
 router.use('/tasks', taskRoutes);
+router.use('/log', logRoutes);
 
 router.get('/games', async (req, res) => {
     try {
@@ -59,5 +62,6 @@ router.use('/games/rivals/gamedata', rivalsGameDataRoutes);
 router.use('/games/rivals/duels', rivalsDuelRoutes);
 router.use('/games/rivals/queue', rivalsQueueRoutes);
 router.use('/games/rivals/admin', rivalsAdminRoutes);
+router.use('/games/rivals/leaderboard', rivalsLeaderboardRoutes);
 
 module.exports = router;
