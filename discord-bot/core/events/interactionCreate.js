@@ -1,6 +1,7 @@
 // discord-bot/core/events/interactionCreate.js
 const { Events, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { apiClient } = require('../utils/apiClient');
+const { isCommandEnabled } = require('../utils/statusCache'); // [ADDED]
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -8,6 +9,12 @@ module.exports = {
         if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) return;
+
+            // [ADDED] Centralized check for command status
+            if (!isCommandEnabled(interaction.commandName)) {
+                return interaction.reply({ content: 'This command is temporarily disabled by an administrator.', ephemeral: true });
+            }
+
             try {
                 await command.execute(interaction);
             } catch (error) {
