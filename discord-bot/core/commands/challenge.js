@@ -15,7 +15,7 @@ module.exports = {
             option.setName('game')
                 .setDescription('The game you want to play.')
                 .setRequired(true)
-                .addChoices(...getGameChoices())), // Dynamically adds game choices
+                .addChoices(...getGameChoices())),
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -29,7 +29,6 @@ module.exports = {
         }
 
         try {
-            // [MODIFIED] Use dynamic API endpoint for pre-check
             const { data } = await apiClient.post(`/games/${gameId}/duels/pre-check`, {
                 challengerDiscordId: challenger.id,
                 opponentDiscordId: opponent.id,
@@ -69,7 +68,6 @@ module.exports = {
                 if (selectedWager && selectedMap) {
                     await i.deferUpdate();
                     try {
-                        // [MODIFIED] Use dynamic API endpoint for creation
                         await apiClient.post(`/games/${gameId}/duels/create`, {
                             challengerDiscordId: challenger.id, opponentDiscordId: opponent.id, wager: selectedWager,
                             rules: { map: selectedMap, region: 'NA-East', banned_weapons: [] }
