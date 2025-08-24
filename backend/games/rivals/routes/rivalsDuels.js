@@ -2,7 +2,7 @@
 const express = require('express');
 const { body, query, param } = require('express-validator');
 const db = require('../../../database/database');
-const { authenticateToken, handleValidationErrors, authenticateBot } = require('../../../middleware/auth');
+const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../../middleware/auth');
 const GAME_DATA = require('../data/rivalsGameData');
 const { sendInboxRefresh } = require('../../../core/services/notificationService');
 
@@ -132,10 +132,14 @@ router.get('/find-player', authenticateToken, query('roblox_username').trim().no
     }
 });
 
-router.post('/challenge', authenticateToken,
-    body('opponent_id').isUUID(), body('wager').isInt({ gt: 0 }),
+router.post('/challenge', 
+    authenticateToken,
+    checkFeatureFlag('dueling_rivals_direct'), // [MODIFIED] Added feature flag middleware
+    body('opponent_id').isUUID(), 
+    body('wager').isInt({ gt: 0 }),
     body('rules.map').trim().escape().notEmpty(),
-    body('rules.banned_weapons').isArray(), body('rules.region').isIn(GAME_DATA.regions.map(r => r.id)),
+    body('rules.banned_weapons').isArray(), 
+    body('rules.region').isIn(GAME_DATA.regions.map(r => r.id)),
     handleValidationErrors,
     async (req, res) => {
         const challenger_id = req.user.userId;
@@ -143,8 +147,14 @@ router.post('/challenge', authenticateToken,
         const client = await db.getPool().connect();
         try {
             await client.query('BEGIN');
-            const { rows: [challenger] } = await client.query("SELECT u.gems, ugp.linked_game_username FROM users u JOIN user_game_profiles ugp ON u.id = ugp.user_id WHERE u.id = $1 AND ugp.game_id = $2 FOR UPDATE", [challenger_id, RIVALS_GAME_ID]);
             
+            const { rows: [existingDuel] } = await client.query("SELECT id FROM duels WHERE challenger_id = $1 AND opponent_id = $2 AND status = 'pending'", [challenger_id, opponent_id]);
+            if (existingDuel) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ message: 'You already have a pending challenge sent to this player.' });
+            }
+
+            const { rows: [challenger] } = await client.query("SELECT u.gems, ugp.linked_game_username FROM users u JOIN user_game_profiles ugp ON u.id = ugp.user_id WHERE u.id = $1 AND ugp.game_id = $2 FOR UPDATE", [challenger_id, RIVALS_GAME_ID]);
             if (parseInt(challenger.gems) < wager) {
                 await client.query('ROLLBACK');
                 return res.status(400).json({ message: 'You do not have enough gems for this wager.' });
@@ -168,7 +178,6 @@ router.post('/challenge', authenticateToken,
     }
 );
 
-// [ADDED] Endpoint to respond to a duel
 router.post('/:id/respond', authenticateToken, param('id').isInt(), body('response').isIn(['accept', 'decline']), handleValidationErrors, async (req, res) => {
     const duelId = req.params.id;
     const { response } = req.body;
