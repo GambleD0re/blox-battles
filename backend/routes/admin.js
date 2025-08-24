@@ -8,6 +8,37 @@ const { sendInboxRefresh } = require('../core/services/notificationService');
 
 const router = express.Router();
 
+// [NEW] Secure endpoint for staff to look up user details via the bot
+router.get('/user-lookup/:discordId', authenticateToken, isAdmin, param('discordId').isString(), handleValidationErrors, async (req, res) => {
+    try {
+        const { discordId } = req.params;
+        const { rows: [user] } = await db.query(
+            'SELECT id, username, email, gems, status, ban_reason, ban_expires_at, created_at FROM users WHERE discord_id = $1',
+            [discordId]
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: 'No Blox Battles account is linked to this Discord user.' });
+        }
+
+        const profilesPromise = db.query('SELECT game_id, linked_game_username, wins, losses FROM user_game_profiles WHERE user_id = $1', [user.id]);
+        const transactionsPromise = db.query('SELECT type, amount_gems, description, created_at FROM transaction_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [user.id]);
+        const ticketsPromise = db.query('SELECT id, type, status, subject FROM tickets WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [user.id]);
+
+        const [{ rows: gameProfiles }, { rows: transactions }, { rows: tickets }] = await Promise.all([
+            profilesPromise,
+            transactionsPromise,
+            ticketsPromise
+        ]);
+
+        res.status(200).json({ user, gameProfiles, transactions, tickets });
+    } catch (error) {
+        console.error('Admin User Lookup Error:', error);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    }
+});
+
+
 const decrementPlayerCount = async (client, duelId) => {
     try {
         const { rows: [duel] } = await client.query('SELECT assigned_server_id FROM duels WHERE id = $1', [duelId]);
@@ -314,10 +345,8 @@ router.post('/users/:id/ban', authenticateToken, isAdmin,
             const banSql = `UPDATE users SET status = 'banned', ban_reason = $1, ban_expires_at = ${banExpiresAtClause}, ban_applied_at = NOW() WHERE id = $2`;
             await client.query(banSql, [reason, id]);
             
-            // [ADDED] Cancel pending payout requests for the banned user
             await client.query("UPDATE payout_requests SET status = 'canceled_by_user' WHERE user_id = $1 AND status = 'awaiting_approval'", [id]);
             
-            // [ADDED] Cancel pending duels and refund opponents
             const { rows: pendingDuels } = await client.query("SELECT * FROM duels WHERE (challenger_id = $1 OR opponent_id = $1) AND status IN ('pending', 'accepted') FOR UPDATE", [id]);
             for (const duel of pendingDuels) {
                 if (duel.status === 'accepted') {
