@@ -1,11 +1,42 @@
 // backend/core/routes/discord.js
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator'); // [MODIFIED] Added 'param'
 const db = require('../../database/database');
 const { authenticateToken, authenticateBot, handleValidationErrors } = require('../../middleware/auth');
 const { sendInboxRefresh } = require('../services/notificationService');
 
 const router = express.Router();
+
+// [ADDED] New endpoint for the bot to fetch user profile data
+router.get('/user-profile/:discordId',
+    authenticateBot,
+    [ param('discordId').isString().notEmpty().withMessage('Discord ID is required.') ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { discordId } = req.params;
+        try {
+            const { rows: [user] } = await db.query('SELECT id, username, email, gems, created_at FROM users WHERE discord_id = $1', [discordId]);
+
+            if (!user) {
+                return res.status(404).json({ message: 'No Blox Battles account is linked to this Discord user.' });
+            }
+
+            const { rows: gameProfiles } = await db.query(
+                `SELECT g.name as game_name, ugp.linked_game_username, ugp.wins, ugp.losses, ugp.avatar_url
+                 FROM user_game_profiles ugp
+                 JOIN games g ON ugp.game_id = g.id
+                 WHERE ugp.user_id = $1`,
+                [user.id]
+            );
+            
+            res.status(200).json({ user, gameProfiles });
+        } catch (error) {
+            console.error("Discord Get User Profile Error:", error);
+            res.status(500).json({ message: 'An internal server error occurred.' });
+        }
+    }
+);
+
 
 router.post('/initiate-link',
     authenticateBot,
