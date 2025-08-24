@@ -21,46 +21,32 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+const commandsPath = path.join(__dirname, 'core', 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-// Recursive function to load commands from nested directories
-const loadCommands = (dir) => {
-    const files = fs.readdirSync(dir, { withFileTypes: true });
-    for (const file of files) {
-        const fullPath = path.join(dir, file.name);
-        if (file.isDirectory()) {
-            loadCommands(fullPath);
-        } else if (file.name.endsWith('.js')) {
-            const command = require(fullPath);
-            if ('data' in command && 'execute' in command) {
-                client.commands.set(command.data.name, command);
-                console.log(`[COMMANDS] Loaded /${command.data.name} from ${fullPath}`);
-            } else {
-                console.warn(`[WARNING] Command at ${fullPath} is missing "data" or "execute".`);
-            }
-        }
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+        console.log(`[COMMANDS] Loaded /${command.data.name}`);
+    } else {
+        console.warn(`[WARNING] Command at ${filePath} is missing "data" or "execute".`);
     }
-};
+}
 
-// Recursive function to load events
-const loadEvents = (dir) => {
-    const files = fs.readdirSync(dir).filter(file => file.endsWith('.js'));
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        const event = require(filePath);
-        if (event.once) {
-            client.once(event.name, (...args) => event.execute(...args));
-        } else {
-            client.on(event.name, (...args) => event.execute(...args));
-        }
-        console.log(`[EVENTS] Loaded event: ${event.name}`);
+const eventsPath = path.join(__dirname, 'core', 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args));
     }
-};
-
-// Load core and game-specific commands
-loadCommands(path.join(__dirname, 'core', 'commands'));
-loadCommands(path.join(__dirname, 'games'));
-
-// Load core events
-loadEvents(path.join(__dirname, 'core', 'events'));
+    console.log(`[EVENTS] Loaded event: ${event.name}`);
+}
 
 client.login(DISCORD_BOT_TOKEN);
