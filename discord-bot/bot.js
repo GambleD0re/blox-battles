@@ -1,7 +1,7 @@
 // discord-bot/bot.js
 require('dotenv').config();
 const fs = require('fs');
-const path = require('path');
+const path = path('path');
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
