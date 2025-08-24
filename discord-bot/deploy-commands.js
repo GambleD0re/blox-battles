@@ -11,28 +11,18 @@ if (!DISCORD_BOT_TOKEN || !DISCORD_CLIENT_ID || !DISCORD_GUILD_ID) {
 }
 
 const commands = [];
+const commandsPath = path.join(__dirname, 'core', 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-// Recursive function to find all command files
-const findCommandFiles = (dir) => {
-    const files = fs.readdirSync(dir, { withFileTypes: true });
-    for (const file of files) {
-        const fullPath = path.join(dir, file.name);
-        if (file.isDirectory()) {
-            findCommandFiles(fullPath);
-        } else if (file.name.endsWith('.js')) {
-            const command = require(fullPath);
-            if ('data' in command && 'execute' in command) {
-                commands.push(command.data.toJSON());
-            } else {
-                console.warn(`[DEPLOY] Command at ${fullPath} is invalid.`);
-            }
-        }
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'execute' in command) {
+        commands.push(command.data.toJSON());
+    } else {
+        console.warn(`[DEPLOY] Command at ${filePath} is invalid.`);
     }
-};
-
-// Find all commands in core and games directories
-findCommandFiles(path.join(__dirname, 'core', 'commands'));
-findCommandFiles(path.join(__dirname, 'games'));
+}
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN);
 
