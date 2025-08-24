@@ -12,6 +12,7 @@ import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
 import { ChallengeModal, DuelDetailsModal, ConfirmationModal, TranscriptModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
 import QueueConfigForm from '../../../components/games/rivals/QueueConfigForm';
+import FeatureGuard from '../../../components/FeatureGuard'; // [ADDED] Import FeatureGuard
 
 const RivalsDashboard = () => {
     const { user, token, gameProfiles, refreshUser, refreshGameProfile } = useAuth();
@@ -169,12 +170,17 @@ const RivalsDashboard = () => {
 
             <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-6">
-                    <ChallengePlayer token={token} onChallenge={handleChallengePlayer} />
-                    {queueStatus ? (
-                        <QueueStatusWidget queueStatus={queueStatus} token={token} showMessage={showMessage} onQueueLeft={handleQueueLeft} />
-                    ) : (
-                        <QuickMatchWidget onJoinClick={() => setQueueModalOpen(true)} />
-                    )}
+                    {/* [MODIFIED] Wrapped components in FeatureGuard */}
+                    <FeatureGuard featureName="dueling_rivals_direct">
+                        <ChallengePlayer token={token} onChallenge={handleChallengePlayer} />
+                    </FeatureGuard>
+                    <FeatureGuard featureName="dueling_rivals_queue">
+                        {queueStatus ? (
+                            <QueueStatusWidget queueStatus={queueStatus} token={token} showMessage={showMessage} onQueueLeft={handleQueueLeft} />
+                        ) : (
+                            <QuickMatchWidget onJoinClick={() => setQueueModalOpen(true)} />
+                        )}
+                    </FeatureGuard>
                 </div>
                 <div className="flex">
                     <Inbox 
