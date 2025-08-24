@@ -1,6 +1,7 @@
 // backend/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const db = require('../database/database'); // [ADDED] For feature flag checks
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -8,6 +9,20 @@ if (!jwtSecret) {
 }
 
 const ADMIN_TEST_KEY = process.env.ADMIN_TEST_API_KEY;
+
+// [ADDED] Middleware to check if a feature is enabled
+const checkFeatureFlag = (featureName) => async (req, res, next) => {
+    try {
+        const { rows: [feature] } = await db.query('SELECT is_enabled, disabled_message FROM system_status WHERE feature_name = $1', [featureName]);
+        if (feature && feature.is_enabled) {
+            return next();
+        }
+        return res.status(403).json({ message: feature?.disabled_message || 'This feature is temporarily unavailable.' });
+    } catch (error) {
+        console.error(`Feature flag check failed for ${featureName}:`, error);
+        return res.status(500).json({ message: 'Server error while checking feature status.' });
+    }
+};
 
 const authenticateToken = (req, res, next) => {
     const testKey = req.headers['x-admin-test-key'];
@@ -98,4 +113,5 @@ module.exports = {
     isAdmin,
     authenticateBot,
     isMasterAdmin,
+    checkFeatureFlag,
 };
