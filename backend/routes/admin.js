@@ -8,7 +8,6 @@ const { sendInboxRefresh } = require('../core/services/notificationService');
 
 const router = express.Router();
 
-// [NEW] Secure endpoint for staff to look up user details via the bot
 router.get('/user-lookup/:discordId', authenticateToken, isAdmin, param('discordId').isString(), handleValidationErrors, async (req, res) => {
     try {
         const { discordId } = req.params;
@@ -350,13 +349,11 @@ router.post('/users/:id/ban', authenticateToken, isAdmin,
             const { rows: pendingDuels } = await client.query("SELECT * FROM duels WHERE (challenger_id = $1 OR opponent_id = $1) AND status IN ('pending', 'accepted') FOR UPDATE", [id]);
             for (const duel of pendingDuels) {
                 if (duel.status === 'accepted') {
-                    const opponentId = duel.challenger_id.toString() === id ? duel.opponent_id : duel.challenger_id;
-                    await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [duel.wager, opponentId]);
+                    await client.query('UPDATE users SET gems = gems + $1 WHERE id = ANY($2::uuid[])', [duel.wager, [duel.challenger_id, duel.opponent_id]]);
+                    await client.query("UPDATE duels SET status = 'canceled', tax_collected = 0 WHERE id = $1", [duel.id]);
+                } else {
+                    await client.query("UPDATE duels SET status = 'canceled' WHERE id = $1", [duel.id]);
                 }
-                if(duel.status === 'started' || duel.status === 'accepted'){
-                    await decrementPlayerCount(client, duel.id);
-                }
-                await client.query("UPDATE duels SET status = 'canceled' WHERE id = $1", [duel.id]);
             }
             
             await client.query('COMMIT');
