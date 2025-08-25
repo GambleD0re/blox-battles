@@ -26,7 +26,8 @@ const QueueStatusWidget = ({ queueStatus, token, showMessage, onQueueLeft }) => 
     const handleLeaveQueue = async () => {
         setIsSubmitting(true);
         try {
-            await api.leaveQueue(token);
+            // [FIXED] Corrected function call from leaveQueue to leaveRivalsQueue
+            await api.leaveRivalsQueue(token);
             showMessage('You have left the queue.', 'success');
             onQueueLeft();
         } catch (error) {
