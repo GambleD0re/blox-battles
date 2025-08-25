@@ -91,7 +91,7 @@ passport.use(new GoogleStrategy({
         const provisionalUsername = `user_${newUserId.substring(0, 8)}`;
         
         await db.query(
-            'INSERT INTO users (id, google_id, email, username, is_admin, is_master_admin, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, false, false, true, false)',
+            'INSERT INTO users (id, google_id, email, username, is_admin, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, false, true, false)',
             [newUserId, googleId, email, provisionalUsername]
         );
         const { rows: [newUser] } = await db.query('SELECT * FROM users WHERE id = $1', [newUserId]);
