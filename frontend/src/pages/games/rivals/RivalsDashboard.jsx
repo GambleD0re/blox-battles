@@ -9,13 +9,13 @@ import Inbox from '../../../components/games/rivals/Inbox';
 import QuickMatchWidget from '../../../components/games/rivals/QuickMatchWidget';
 import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget';
 import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
-import { ChallengeModal, DuelDetailsModal, ConfirmationModal, TranscriptModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
+import { ChallengeModal, DuelDetailsModal, ConfirmationModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
 import QueueConfigForm from '../../../components/games/rivals/QueueConfigForm';
 import FeatureGuard from '../../../components/FeatureGuard';
 
 const RivalsDashboard = () => {
-    const { user, token, gameProfiles, refreshUser, refreshGameProfile } = useAuth();
+    const { user, token, gameProfiles, fullRefresh } = useAuth();
     const rivalsProfile = gameProfiles?.rivals;
 
     const [inbox, setInbox] = useState([]);
@@ -39,11 +39,11 @@ const RivalsDashboard = () => {
         setTimeout(() => setMessage({ text: '', type: '' }), 5000);
     };
 
-    const fetchRivalsData = useCallback(async () => {
+    const fetchDashboardData = useCallback(async () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            await refreshGameProfile('rivals'); 
+            await fullRefresh(); 
             
             const [inboxData, gameData, resultsData, queueData] = await Promise.all([
                 api.getInbox(token),
@@ -51,7 +51,7 @@ const RivalsDashboard = () => {
                 api.getRivalsUnseenResults(token),
                 api.getRivalsQueueStatus(token)
             ]);
-            setInbox(inboxData.filter(n => n.game_id === 'rivals' || !n.game_id));
+            setInbox(inboxData);
             setGameData(gameData);
             setUnseenResults(resultsData);
             setQueueStatus(queueData);
@@ -60,11 +60,11 @@ const RivalsDashboard = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [token, refreshGameProfile]);
+    }, [token, fullRefresh]);
 
     useEffect(() => {
-        fetchRivalsData();
-    }, [fetchRivalsData]);
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     const handleChallengePlayer = (opponent) => {
         setSelectedOpponent(opponent);
@@ -81,7 +81,7 @@ const RivalsDashboard = () => {
             const result = await api.sendRivalsChallenge(challengeData, token);
             showMessage(result.message, 'success');
             setChallengeModalOpen(false);
-            fetchRivalsData();
+            fetchDashboardData();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -92,8 +92,7 @@ const RivalsDashboard = () => {
             const result = await api.respondToRivalsDuel(duelId, response, token);
             showMessage(result.message, 'success');
             setDetailsModalOpen(false);
-            await refreshUser();
-            await fetchRivalsData();
+            await fetchDashboardData();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -103,7 +102,7 @@ const RivalsDashboard = () => {
         try {
             const result = await api.startRivalsDuel(duel.id, token);
             showMessage(result.message, 'success');
-            fetchRivalsData();
+            fetchDashboardData();
         } catch(error) {
             showMessage(error.message, 'error');
         }
@@ -114,7 +113,7 @@ const RivalsDashboard = () => {
             await api.confirmRivalsDuelResult(duelId, token);
             setUnseenResults(prev => prev.filter(r => r.id !== duelId));
             showMessage('Result confirmed!', 'success');
-            refreshUser();
+            fullRefresh();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -125,7 +124,7 @@ const RivalsDashboard = () => {
             const result = await api.fileRivalsDispute(duelId, disputeData, token);
             showMessage(result.message, 'success');
             setUnseenResults(prev => prev.filter(r => r.id !== duelId));
-            fetchRivalsData();
+            fetchDashboardData();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -147,11 +146,9 @@ const RivalsDashboard = () => {
     };
     
     const handleMatchFound = (payload) => {
-        if (payload.gameId === 'rivals') {
-            showMessage('Rivals match found!', 'success');
-            setQueueStatus(null);
-            setMatchReadyInfo(payload);
-        }
+        showMessage('Match found!', 'success');
+        setQueueStatus(null);
+        setMatchReadyInfo(payload);
     };
 
     const handleJoinMatch = () => {
@@ -159,7 +156,27 @@ const RivalsDashboard = () => {
             window.open(matchReadyInfo.serverLink, '_blank');
         }
         setMatchReadyInfo(null);
-        fetchRivalsData();
+        fetchDashboardData();
+    };
+
+    const handleConfirmWithdrawal = async (payoutId) => {
+        try {
+            const result = await api.confirmAndSendPayout(payoutId, token);
+            showMessage(result.message, 'success');
+            fetchDashboardData();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    };
+
+    const handleCancelWithdrawal = async (payoutId) => {
+        try {
+            const result = await api.cancelWithdrawalRequest(payoutId, token);
+            showMessage(result.message, 'success');
+            fetchDashboardData();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
     };
 
     if (isLoading || !rivalsProfile) {
@@ -191,6 +208,8 @@ const RivalsDashboard = () => {
                         notifications={inbox}
                         onStartDuel={handleStartDuel}
                         onViewDuel={handleViewDuel}
+                        onConfirmWithdrawal={handleConfirmWithdrawal}
+                        onCancelWithdrawal={handleCancelWithdrawal}
                     />
                 </div>
             </main>
@@ -238,7 +257,7 @@ const RivalsDashboard = () => {
             <LiveFeed 
                 token={token} 
                 onMatchFound={handleMatchFound} 
-                onInboxRefresh={fetchRivalsData} 
+                onInboxRefresh={fetchDashboardData} 
             />
         </div>
     );
