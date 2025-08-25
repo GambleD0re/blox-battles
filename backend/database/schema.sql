@@ -244,4 +244,51 @@ CREATE TABLE tournament_matches (
     round_number INTEGER NOT NULL,
     match_in_round INTEGER NOT NULL,
     player1_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    player2_id UUID REFERENCE
+    player2_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    winner_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'active', 'completed'))
+);
+
+CREATE TABLE tasks (
+    id SERIAL PRIMARY KEY,
+    task_type VARCHAR(255) NOT NULL,
+    payload JSONB,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE game_servers (
+    server_id VARCHAR(255) PRIMARY KEY,
+    game_id VARCHAR(50) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    region VARCHAR(50) NOT NULL,
+    join_link TEXT NOT NULL,
+    player_count INTEGER NOT NULL DEFAULT 0,
+    last_heartbeat TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE reaction_roles (
+    message_id VARCHAR(255) NOT NULL,
+    emoji_id VARCHAR(255) NOT NULL,
+    role_id VARCHAR(255) NOT NULL,
+    PRIMARY KEY (message_id, emoji_id)
+);
+
+INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
+('site_wide_maintenance', FALSE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
+('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
+('deposits_stripe', TRUE, 'Credit card deposits are temporarily disabled.'),
+('deposits_crypto', TRUE, 'Cryptocurrency deposits are temporarily disabled.'),
+('withdrawals_crypto', TRUE, 'Cryptocurrency withdrawals are temporarily disabled.'),
+('linking_rivals', TRUE, 'Linking new Roblox accounts is temporarily disabled.'),
+('linking_discord', TRUE, 'Linking new Discord accounts is temporarily disabled.'),
+('dueling_rivals_direct', TRUE, 'Direct dueling for Rivals is temporarily disabled.'),
+('dueling_rivals_queue', TRUE, 'The matchmaking queue for Rivals is temporarily disabled.'),
+('tournaments_rivals', TRUE, 'Rivals tournaments are temporarily disabled.');
+
+INSERT INTO games (id, name, description, icon_url, is_active) VALUES
+('rivals', 'Roblox Rivals', 'The classic 1v1 dueling experience.', '/game-icons/rivals.png', TRUE);
+
+CREATE INDEX idx_duels_status_created_at ON duels(status, created_at);
+CREATE INDEX idx_duels_participants ON duels(challenger_id, opponent_id);
+CREATE INDEX idx_tasks_status_type ON tasks(status, task_type);
