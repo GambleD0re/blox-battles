@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import * as api from '../../../services/api';
 
 const RivalsLinkPage = () => {
-    const { token, gameProfiles, refreshGameProfile } = useAuth();
+    const { token, gameProfiles, fullRefresh } = useAuth();
     const navigate = useNavigate();
     const [robloxUsername, setRobloxUsername] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -14,10 +14,11 @@ const RivalsLinkPage = () => {
     const rivalsProfile = gameProfiles?.rivals;
     const verificationPhrase = rivalsProfile?.verification_phrase;
 
-    // [FIX] Fetch the game profile data when the component mounts
     useEffect(() => {
-        refreshGameProfile('rivals');
-    }, [refreshGameProfile]);
+        if (!rivalsProfile) {
+            fullRefresh();
+        }
+    }, [rivalsProfile, fullRefresh]);
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -26,7 +27,7 @@ const RivalsLinkPage = () => {
         try {
             const data = await api.verifyRivalsAccount(robloxUsername, token);
             setMessage({ text: data.message, type: 'success' });
-            await refreshGameProfile('rivals');
+            await fullRefresh();
             
             setTimeout(() => {
                 navigate('/games/rivals/dashboard');
