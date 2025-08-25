@@ -24,7 +24,7 @@ router.post('/join', authenticateToken,
         body('wager').isInt({ gt: 0 }),
         body('preferences.region').isIn(GAME_DATA.regions.map(r => r.id)),
         body('preferences.banned_map').isString().notEmpty(),
-        body('preferences.banned_weapons').isArray({ min: 0, max: 2 })
+        body('preferences.banned_weapons').isArray({ min: 2, max: 2 }).withMessage('Exactly two weapons must be selected for banning.')
     ],
     handleValidationErrors,
     async (req, res) => {
@@ -55,7 +55,7 @@ router.post('/join', authenticateToken,
             const { rowCount } = await client.query(insertSql, [userId, RIVALS_GAME_ID, preferences.region, wager, JSON.stringify(preferences)]);
             
             await client.query('COMMIT');
-
+            
             if (rowCount > 0) {
                 res.status(200).json({ message: 'You have joined the Rivals queue.' });
             } else {
