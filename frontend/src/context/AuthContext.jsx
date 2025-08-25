@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
             
             setSystemStatus(statusData);
             setAppConfig(configData);
-            setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set });
+            setUser({ ...userData, isAdmin: decoded.isAdmin, isMasterAdmin: decoded.isMasterAdmin, is_username_set: decoded.is_username_set });
 
             const profilePromises = gamesData.map(game => {
                 if (game.id === 'rivals') {
