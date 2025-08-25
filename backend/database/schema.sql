@@ -275,7 +275,7 @@ CREATE TABLE reaction_roles (
 );
 
 INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
-('site_wide_maintenance', FALSE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
+('site_wide_maintenance', TRUE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
 ('deposits_stripe', TRUE, 'Credit card deposits are temporarily disabled.'),
 ('deposits_crypto', TRUE, 'Cryptocurrency deposits are temporarily disabled.'),
