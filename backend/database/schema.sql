@@ -113,6 +113,7 @@ CREATE TABLE payout_requests (
     amount_usd NUMERIC NOT NULL,
     fee_usd NUMERIC NOT NULL,
     destination_address VARCHAR(255),
+    token_type VARCHAR(10),
     status VARCHAR(50) NOT NULL DEFAULT 'awaiting_approval' CHECK(status IN ('awaiting_approval', 'approved', 'declined', 'processing', 'completed', 'failed', 'canceled_by_user')),
     decline_reason TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -272,7 +273,6 @@ CREATE TABLE reaction_roles (
     PRIMARY KEY (message_id, emoji_id)
 );
 
--- [MODIFIED] New, more granular feature flags
 INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 ('site_wide_maintenance', FALSE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
@@ -287,3 +287,7 @@ INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 
 INSERT INTO games (id, name, description, icon_url, is_active) VALUES
 ('rivals', 'Roblox Rivals', 'The classic 1v1 dueling experience.', '/game-icons/rivals.png', TRUE);
+
+CREATE INDEX idx_duels_status_created_at ON duels(status, created_at);
+CREATE INDEX idx_duels_participants ON duels(challenger_id, opponent_id);
+CREATE INDEX idx_tasks_status_type ON tasks(status, task_type);
