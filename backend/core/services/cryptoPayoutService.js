@@ -1,6 +1,7 @@
 // backend/core/services/cryptoPayoutService.js
 const ethers = require('ethers');
 const { getProviders } = require('./providerService');
+const { getLatestPrice } = require('./priceFeedService');
 
 const PAYOUT_WALLET_PRIVATE_KEY = process.env.PAYOUT_WALLET_PRIVATE_KEY;
 
@@ -53,12 +54,16 @@ async function sendCryptoPayout(recipientAddress, amountUsd, tokenType) {
 
     try {
         const contract = new ethers.Contract(tokenConfig.contractAddress, ERC20_ABI, signer);
-        const decimals = tokenConfig.decimals;
-        const currentPrice = await getLatestPrice(tokenType); // Fetch price for USDC, USDT etc.
+        
+        const priceSymbol = `${tokenType}_USD_POLYGON`;
+        const currentPrice = await getLatestPrice(priceSymbol);
+
         if (!currentPrice || currentPrice <= 0) {
-        throw new Error(`Invalid price for ${tokenType}.`);
+            throw new Error(`Could not fetch a valid price for ${tokenType} on Polygon.`);
         }
+
         const cryptoAmountToSend = amountUsd / currentPrice;
+        const decimals = tokenConfig.decimals;
         const amountInSmallestUnit = ethers.parseUnits(cryptoAmountToSend.toString(), decimals);
 
         await contract.transfer.estimateGas(recipientAddress, amountInSmallestUnit);
