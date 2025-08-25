@@ -58,7 +58,6 @@ async function runScheduledTasks() {
             }
         }
 
-        // [ADDED] Tournament Finalization Logic
         const finalizeSql = `SELECT * FROM tournaments WHERE status = 'dispute_period' AND ends_at <= NOW() - INTERVAL '${TOURNAMENT_DISPUTE_HOURS} hours'`;
         const { rows: tournamentsToFinalize } = await tournamentClient.query(finalizeSql);
         
@@ -119,7 +118,7 @@ async function runScheduledTasks() {
         expirationClient.release();
     }
 
-    // [IMPROVED] Duel Forfeits (Started)
+    // Duel Forfeits (Started)
     const forfeitClient = await pool.connect();
     try {
         const sql = `SELECT id, game_id, challenger_id, opponent_id, pot, wager, transcript, tax_collected FROM duels WHERE status = 'started' AND started_at <= NOW() - (INTERVAL '${DUEL_FORFEIT_MINUTES} minutes' + (INTERVAL '1 second' * expiration_offset_seconds)) FOR UPDATE`;
@@ -226,7 +225,7 @@ async function runScheduledTasks() {
                 const { rows: duels } = await txClient.query(`SELECT id, game_id, challenger_id, opponent_id, wager FROM duels WHERE assigned_server_id = $1 AND status IN ('started', 'in_progress')`, [server.server_id]);
                 for (const duel of duels) {
                     await txClient.query('UPDATE users SET gems = gems + $1 WHERE id = ANY($2::uuid[])', [duel.wager, [duel.challenger_id, duel.opponent_id]]);
-                    await txClient.query("UPDATE duels SET status = 'canceled' WHERE id = $1", [duel.id]);
+                    await txClient.query("UPDATE duels SET status = 'canceled', tax_collected = 0 WHERE id = $1", [duel.id]);
                     const message = `Your duel (#${duel.id}) was canceled due to a server issue. Your wager of ${duel.wager} gems has been refunded.`;
                     await txClient.query("INSERT INTO inbox_messages (user_id, game_id, type, title, message) VALUES ($1, $2, 'server_crash_refund', 'Duel Canceled: Server Issue', $3)", [duel.challenger_id, duel.game_id, message]);
                     await txClient.query("INSERT INTO inbox_messages (user_id, game_id, type, title, message) VALUES ($1, $2, 'server_crash_refund', 'Duel Canceled: Server Issue', $3)", [duel.opponent_id, duel.game_id, message]);
