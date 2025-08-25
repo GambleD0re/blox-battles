@@ -9,21 +9,16 @@ module.exports = {
     async execute(interaction) {
         try {
             await interaction.deferReply({ ephemeral: true });
-            const { data } = await apiClient.post('/discord/check-user', { discordId: interaction.user.id });
+            
+            // Use the valid user-profile endpoint to get user status
+            const { data } = await apiClient.get(`/discord/user-profile/${interaction.user.id}`);
             const user = data.user;
-
-            if (!user) {
-                return interaction.editReply({ content: 'You must link your Blox Battles account before creating a ticket. Please use the `/link` command first.' });
-            }
-
-            if (user.open_tickets && user.open_tickets.length > 0) {
-                 return interaction.editReply({ content: `You already have an open ticket. Please wait for it to be resolved before creating a new one.` });
-            }
 
             const isBanned = user.status === 'banned';
             const selectMenuOptions = [
                 new StringSelectMenuOptionBuilder().setLabel('Support Request').setValue('support').setDescription('For billing, technical issues, or other questions.')
             ];
+            
             if (isBanned) {
                 selectMenuOptions.unshift(new StringSelectMenuOptionBuilder().setLabel('Ban Appeal').setValue('ban_appeal').setDescription('Appeal a temporary or permanent ban.'));
             }
@@ -32,8 +27,12 @@ module.exports = {
             const row = new ActionRowBuilder().addComponents(ticketTypeSelect);
 
             await interaction.editReply({ content: 'Please select the type of ticket you wish to create.', components: [row] });
+
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'An error occurred during the ticket process.';
+            // This catch block will now correctly handle users who haven't linked their account (API returns 404)
+            const errorMessage = error.response?.status === 404 
+                ? 'You must link your Blox Battles account before creating a ticket. Please use the `/link` command first.'
+                : error.response?.data?.message || 'An error occurred during the ticket process.';
             await interaction.editReply({ content: `❌ **Error:** ${errorMessage}`, components: [] });
         }
     },
