@@ -65,7 +65,6 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
             ws.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'live_feed_history') {
-                    // [FIXED] Only take the first two duels from history to prevent stacking on reload
                     const displayableHistory = data.payload.slice(0, 2);
                     setDuels(displayableHistory.map((duelData, i) => ({ key: `hist-${duelData.id}`, position: i === 0 ? 'slot1' : 'slot2', data: duelData })));
                 } else if (data.type === 'live_feed_update') {
@@ -93,10 +92,13 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
             <button onClick={toggleVisibility} className="absolute left-4 -top-6 w-12 h-6 bg-gray-800/80 backdrop-blur-md border-t border-l border-r border-gray-700 rounded-t-lg flex items-center justify-center text-gray-400 hover:text-white" title={isVisible ? 'Hide Feed' : 'Show Feed'}>
                 {isVisible ? <ChevronDownIcon /> : <ChevronUpIcon />}
             </button>
-            <div className="h-28 bg-black/60 backdrop-blur-md border-t-2 border-gray-800 flex items-center overflow-hidden">
-                <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-purple-400 font-black text-2xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>LIVE</span></div>
+            {/* [FIXED] Reduced height from h-28 to h-24 */}
+            <div className="h-24 bg-black/60 backdrop-blur-md border-t-2 border-gray-800 flex items-center overflow-hidden">
+                {/* [FIXED] Reduced font size from text-2xl to text-xl */}
+                <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-purple-400 font-black text-xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>LIVE</span></div>
                 <div className="flex-grow h-full"><div className="live-feed-cards-container">{duels.map(d => <div key={d.key} className={`duel-card-wrapper pos-${d.position}`}><DuelCard duel={d.data} /></div>)}</div></div>
-                <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-yellow-300 font-black text-2xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>FEED</span></div>
+                {/* [FIXED] Reduced font size from text-2xl to text-xl */}
+                <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-yellow-300 font-black text-xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>FEED</span></div>
             </div>
         </div>
     );
