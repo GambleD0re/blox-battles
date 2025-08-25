@@ -22,8 +22,13 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Recursive function to load commands from nested directories
 const loadCommands = (dir) => {
+    // Check if the directory exists before attempting to read it.
+    if (!fs.existsSync(dir)) {
+        console.log(`[COMMANDS] Skipping non-existent directory: ${dir}`);
+        return;
+    }
+
     const files = fs.readdirSync(dir, { withFileTypes: true });
     for (const file of files) {
         const fullPath = path.join(dir, file.name);
@@ -41,7 +46,6 @@ const loadCommands = (dir) => {
     }
 };
 
-// Recursive function to load events
 const loadEvents = (dir) => {
     const files = fs.readdirSync(dir).filter(file => file.endsWith('.js'));
     for (const file of files) {
