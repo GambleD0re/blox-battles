@@ -54,7 +54,12 @@ async function sendCryptoPayout(recipientAddress, amountUsd, tokenType) {
     try {
         const contract = new ethers.Contract(tokenConfig.contractAddress, ERC20_ABI, signer);
         const decimals = tokenConfig.decimals;
-        const amountInSmallestUnit = ethers.parseUnits(amountUsd.toString(), decimals);
+        const currentPrice = await getLatestPrice(tokenType); // Fetch price for USDC, USDT etc.
+        if (!currentPrice || currentPrice <= 0) {
+        throw new Error(`Invalid price for ${tokenType}.`);
+        }
+        const cryptoAmountToSend = amountUsd / currentPrice;
+        const amountInSmallestUnit = ethers.parseUnits(cryptoAmountToSend.toString(), decimals);
 
         await contract.transfer.estimateGas(recipientAddress, amountInSmallestUnit);
         const tx = await contract.transfer(recipientAddress, amountInSmallestUnit);
