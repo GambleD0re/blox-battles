@@ -106,12 +106,12 @@ router.put('/update-request/:id', authenticateToken,
 
         try {
             const { rows: [request] } = await db.query(
-                "SELECT * FROM payout_requests WHERE id = $1 AND user_id = $2 AND status = 'approved'",
+                "SELECT * FROM payout_requests WHERE id = $1 AND user_id = $2 AND status = 'awaiting_approval'",
                 [requestId, userId]
             );
 
             if (!request) {
-                return res.status(404).json({ message: 'Approved withdrawal request not found or it cannot be modified at this time.' });
+                return res.status(404).json({ message: 'A withdrawal request awaiting approval was not found or it cannot be modified at this time.' });
             }
             if (!recipientAddress && !tokenType) {
                 return res.status(400).json({ message: 'No new details provided for update.' });
