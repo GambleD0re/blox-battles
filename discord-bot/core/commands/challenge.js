@@ -15,7 +15,7 @@ module.exports = {
             option.setName('game')
                 .setDescription('The game you want to play.')
                 .setRequired(true)
-                .addChoices(...getGameChoices())), // Dynamically adds game choices
+                .addChoices(...getGameChoices())),
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -29,11 +29,13 @@ module.exports = {
         }
 
         try {
-            // [MODIFIED] Use dynamic API endpoint for pre-check
-            const { data } = await apiClient.post(`/games/${gameId}/duels/pre-check`, {
-                challengerDiscordId: challenger.id,
-                opponentDiscordId: opponent.id,
-            });
+            const [challengerProfileResponse, opponentProfileResponse] = await Promise.all([
+                apiClient.get(`/discord/user-profile/${challenger.id}`),
+                apiClient.get(`/discord/user-profile/${opponent.id}`)
+            ]);
+            
+            const challengerPlatformUser = challengerProfileResponse.data.user;
+            const opponentPlatformUser = opponentProfileResponse.data.user;
 
             const gameData = getGameData(gameId);
             if (!gameData || !gameData.maps) {
@@ -56,7 +58,7 @@ module.exports = {
                 .setColor(0x58a6ff)
                 .setTitle(`⚔️ Creating ${gameName} Duel vs ${opponent.username}`)
                 .setDescription('Select a wager and a map.')
-                .addFields({ name: 'Your Gems', value: data.challenger.gems.toLocaleString(), inline: true });
+                .addFields({ name: 'Your Gems', value: challengerPlatformUser.gems.toLocaleString(), inline: true });
 
             const message = await interaction.editReply({ embeds: [embed], components: [wagerButtons, mapSelect] });
             const collector = message.createMessageComponentCollector({ time: 60000 });
@@ -69,11 +71,13 @@ module.exports = {
                 if (selectedWager && selectedMap) {
                     await i.deferUpdate();
                     try {
-                        // [MODIFIED] Use dynamic API endpoint for creation
-                        await apiClient.post(`/games/${gameId}/duels/create`, {
-                            challengerDiscordId: challenger.id, opponentDiscordId: opponent.id, wager: selectedWager,
+                        const challengePayload = {
+                            opponent_id: opponentPlatformUser.id,
+                            wager: selectedWager,
                             rules: { map: selectedMap, region: 'NA-East', banned_weapons: [] }
-                        });
+                        };
+                        
+                        await apiClient.post(`/games/${gameId}/duels/challenge`, challengePayload);
                         await interaction.editReply({ content: `✅ Challenge for ${gameName} sent to ${opponent.username}!`, embeds: [], components: [] });
                         collector.stop();
                     } catch (err) {
@@ -91,7 +95,10 @@ module.exports = {
                 if (collected.size === 0) interaction.editReply({ content: 'Challenge creation timed out.', embeds: [], components: [] });
             });
         } catch (error) {
-            await interaction.editReply({ content: `❌ ${error.response?.data?.message || 'An error occurred.'}`, embeds: [], components: [] });
+            const errorMessage = error.response?.status === 404
+                ? 'One or both users have not linked their Blox Battles account. Please use `/link` first.'
+                : error.response?.data?.message || 'An unexpected error occurred.';
+            await interaction.editReply({ content: `❌ ${errorMessage}`, embeds: [], components: [] });
         }
     },
 };
