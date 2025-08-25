@@ -31,7 +31,7 @@ const DangerZoneCard = ({ title, text, buttonText, onAction }) => (
 );
 
 const SettingsPage = () => {
-    const { user, token, logout, refreshUser, gameProfiles, refreshGameProfile, appConfig } = useAuth();
+    const { user, token, logout, fullRefresh, gameProfiles, appConfig } = useAuth();
     const navigate = useNavigate();
     
     const [message, setMessage] = useState({ text: '', type: '' });
@@ -47,9 +47,9 @@ const SettingsPage = () => {
 
     useEffect(() => {
         if (!rivalsProfile) {
-            refreshGameProfile('rivals');
+            fullRefresh();
         }
-    }, [rivalsProfile, refreshGameProfile]);
+    }, [rivalsProfile, fullRefresh]);
 
     const showMessage = (text, type = 'success') => { setMessage({ text, type }); setTimeout(() => setMessage({ text: '', type: '' }), 5000); };
     const openModal = (modalName) => setModalStates(prev => ({ ...prev, [modalName]: true }));
@@ -62,7 +62,7 @@ const SettingsPage = () => {
             const result = await api.updatePassword({ currentPassword, newPassword }, token);
             showMessage(result.message, 'success');
             setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-            refreshUser();
+            fullRefresh();
         } catch (error) { showMessage(error.message, 'error'); }
     };
 
@@ -70,7 +70,7 @@ const SettingsPage = () => {
         try {
             await api.updateDiscordNotificationPreference(!user.discord_notifications_enabled, token);
             showMessage('Discord notification preferences updated.', 'success');
-            refreshUser();
+            fullRefresh();
         } catch (error) { showMessage(error.message, 'error'); }
     };
 
@@ -78,7 +78,7 @@ const SettingsPage = () => {
         try {
             await api.updateRivalsChallengePreference(!rivalsProfile.accepting_challenges, token);
             showMessage('Rivals challenge preference updated.', 'success');
-            refreshGameProfile('rivals');
+            fullRefresh();
         } catch (error) { showMessage(error.message, 'error'); }
     };
     
@@ -97,7 +97,7 @@ const SettingsPage = () => {
             await api.unlinkRivalsAccount(token);
             showMessage("Rivals account unlinked successfully.", 'success');
             closeModal('unlinkRivals');
-            await refreshGameProfile('rivals');
+            await fullRefresh();
         } catch (error) { showMessage(error.message, 'error'); }
     };
 
@@ -106,7 +106,7 @@ const SettingsPage = () => {
             await api.unlinkDiscord(token);
             showMessage("Discord account unlinked successfully.", 'success');
             closeModal('unlinkDiscord');
-            await refreshUser();
+            await fullRefresh();
         } catch (error) {
             showMessage(error.message, 'error');
         }
