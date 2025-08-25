@@ -37,7 +37,6 @@ const MainDashboard = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
-        // [FIX] Add a guard clause to ensure the token exists before fetching.
         if (!token) {
             return;
         }
@@ -57,7 +56,7 @@ const MainDashboard = () => {
     }, [token]);
 
     return (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-28">
+        <>
             <SidebarMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
             
             <PlayerHeader user={user} onMenuClick={() => setIsMenuOpen(true)} />
@@ -70,7 +69,7 @@ const MainDashboard = () => {
                             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                         </div>
                     ) : (
-                        <div className="flex gap-6 overflow-x-auto pb-4">
+                        <div className="flex justify-center gap-6 overflow-x-auto pb-4">
                             {games.length > 0 ? (
                                 games.map(game => <GameCard key={game.id} game={game} />)
                             ) : (
@@ -82,7 +81,7 @@ const MainDashboard = () => {
             </main>
             
             <LiveFeed token={token} />
-        </div>
+        </>
     );
 };
 
