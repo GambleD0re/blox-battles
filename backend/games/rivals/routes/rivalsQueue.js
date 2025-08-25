@@ -52,10 +52,15 @@ router.post('/join', authenticateToken,
                 INSERT INTO random_queue_entries (user_id, game_id, region, wager, game_specific_preferences)
                 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO NOTHING
             `;
-            await client.query(insertSql, [userId, RIVALS_GAME_ID, preferences.region, wager, JSON.stringify(preferences)]);
+            const { rowCount } = await client.query(insertSql, [userId, RIVALS_GAME_ID, preferences.region, wager, JSON.stringify(preferences)]);
             
             await client.query('COMMIT');
-            res.status(200).json({ message: 'You have joined the Rivals queue.' });
+
+            if (rowCount > 0) {
+                res.status(200).json({ message: 'You have joined the Rivals queue.' });
+            } else {
+                res.status(200).json({ message: 'You are already in the queue.' });
+            }
         } catch (err) {
             await client.query('ROLLBACK');
             console.error("Join Rivals Queue Error:", err);
