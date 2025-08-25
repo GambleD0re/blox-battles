@@ -29,18 +29,17 @@ export const AuthProvider = ({ children }) => {
                 api.getFeatureStatus(),
                 api.getAppConfig(),
                 api.getCoreUserData(tokenToUse),
-                api.getGames(tokenToUse) // Fetch available games
+                api.getGames(tokenToUse)
             ]);
+            
             setSystemStatus(statusData);
             setAppConfig(configData);
             setUser({ ...userData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set });
 
-            // [FIX] After setting the core user, fetch all their game profiles
             const profilePromises = gamesData.map(game => {
                 if (game.id === 'rivals') {
                     return api.getRivalsGameProfile(tokenToUse).then(profile => ({ gameId: 'rivals', profile }));
                 }
-                // In the future, other game profile fetches would be added here
                 return Promise.resolve(null);
             });
 
@@ -54,7 +53,7 @@ export const AuthProvider = ({ children }) => {
             setGameProfiles(newGameProfiles);
 
         } catch (error) {
-            console.error("Failed to fetch initial data, logging out.", error);
+            console.error("Failed to fetch user data, logging out.", error);
             logout();
         }
     }, [logout]);
@@ -66,6 +65,15 @@ export const AuthProvider = ({ children }) => {
         await fetchAndSetAllData(newToken);
         setIsLoading(false);
     }, [fetchAndSetAllData]);
+
+    const fullRefresh = useCallback(async () => {
+       const tokenFromStorage = localStorage.getItem('token');
+       if (!tokenFromStorage) {
+           logout();
+           return;
+       }
+       await fetchAndSetAllData(tokenFromStorage);
+    }, [logout, fetchAndSetAllData]);
 
     useEffect(() => {
         const initializeAuth = async () => {
@@ -95,44 +103,8 @@ export const AuthProvider = ({ children }) => {
         };
         initializeAuth();
     }, [login, logout, fetchAndSetAllData]);
-    
-    const refreshUser = useCallback(async () => {
-       const tokenFromStorage = localStorage.getItem('token');
-       if (!tokenFromStorage) {
-           logout();
-           return;
-       }
-       try {
-           const decoded = jwtDecode(tokenFromStorage);
-           const newUserData = await api.getCoreUserData(tokenFromStorage);
-           setUser(prevUser => ({ ...prevUser, ...newUserData, isAdmin: decoded.isAdmin, is_username_set: decoded.is_username_set }));
-       } catch (error) {
-           console.error("Failed to refresh user data:", error);
-           logout();
-       }
-    }, [logout]);
-    
-    const refreshGameProfile = useCallback(async (gameId) => {
-        const tokenFromStorage = localStorage.getItem('token');
-        if (!tokenFromStorage || !gameId) return;
-        try {
-            let profileData;
-            if (gameId === 'rivals') {
-                profileData = await api.getRivalsGameProfile(tokenFromStorage);
-            }
-            if (profileData) {
-                setGameProfiles(prev => ({ ...prev, [gameId]: profileData }));
-            }
-        } catch (error) {
-            if (error.response?.status !== 404) {
-                 console.error(`Failed to refresh game profile for ${gameId}:`, error);
-            } else {
-                 setGameProfiles(prev => ({ ...prev, [gameId]: null }));
-            }
-        }
-    }, []);
 
-    const value = { user, gameProfiles, token, systemStatus, appConfig, login, logout, isLoading, refreshUser, refreshGameProfile };
+    const value = { user, gameProfiles, token, systemStatus, appConfig, login, logout, isLoading, fullRefresh };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
