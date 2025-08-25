@@ -28,7 +28,7 @@ style.innerHTML = `
     }
     html {
         /* [FIXED] Scaled UI up slightly for better readability on standard screens. */
-        font-size: 93.75%; /* 15px base */
+        font-size: 100%; /* 15px base */
     }
     html, body, #root {
         height: 100%;
