@@ -6,7 +6,7 @@ import * as api from '../services/api';
 import PlayerHeader from '../components/Dashboard/PlayerHeader';
 import LiveFeed from '../components/Dashboard/LiveFeed';
 import SidebarMenu from '../components/Dashboard/SidebarMenu';
-import MainInbox from '../components/Dashboard/MainInbox'; // Import the new inbox
+import MainInbox from '../components/Dashboard/MainInbox';
 
 const GameCard = ({ game }) => {
     const navigate = useNavigate();
@@ -68,10 +68,11 @@ const MainDashboard = () => {
 
     const handleRespondToLink = async (messageId, response) => {
         try {
+            // [FIXED] This now passes the correct string ID (e.g., "message-123")
             const result = await api.respondToDiscordLink(messageId, response, token);
             showMessage(result.message, 'success');
-            await fullRefresh(); // Use full refresh to update user object with discord_id
-            await fetchData();   // Re-fetch inbox to remove the notification
+            await fullRefresh();
+            await fetchData();
         } catch (error) {
             showMessage(error.message, 'error');
         }
