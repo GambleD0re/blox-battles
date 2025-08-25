@@ -12,8 +12,13 @@ if (!DISCORD_BOT_TOKEN || !DISCORD_CLIENT_ID || !DISCORD_GUILD_ID) {
 
 const commands = [];
 
-// Recursive function to find all command files
 const findCommandFiles = (dir) => {
+    // Check if the directory exists before trying to read it.
+    if (!fs.existsSync(dir)) {
+        console.log(`[DEPLOY] Skipping non-existent directory: ${dir}`);
+        return;
+    }
+
     const files = fs.readdirSync(dir, { withFileTypes: true });
     for (const file of files) {
         const fullPath = path.join(dir, file.name);
