@@ -142,7 +142,8 @@ router.post('/login',
                 email: user.email,
                 username: user.username,
                 isAdmin: user.is_admin,
-                isMasterAdmin: user.is_master_admin
+                isMasterAdmin: user.is_master_admin,
+                is_username_set: user.is_username_set // [FIXED] Add this flag to the JWT payload
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
 
@@ -220,7 +221,8 @@ router.get('/google/callback',
                 email: user.email,
                 username: user.username,
                 isAdmin: user.is_admin,
-                isMasterAdmin: user.is_master_admin
+                isMasterAdmin: user.is_master_admin,
+                is_username_set: user.is_username_set // [FIXED] Add this flag to the JWT payload
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
 
