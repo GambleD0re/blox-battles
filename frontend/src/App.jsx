@@ -17,7 +17,7 @@ import VerificationNoticePage from './pages/VerificationNoticePage.jsx';
 import BanNotice from './pages/BanNotice.jsx';
 import TranscriptViewerPage from './pages/TranscriptViewerPage.jsx';
 import TicketTranscriptViewerPage from './pages/TicketTranscriptViewerPage.jsx';
-import SetUsernamePage from './pages/SetUsernamePage.jsx'; // New page import
+import SetUsernamePage from './pages/SetUsernamePage.jsx';
 
 // Lazy-loaded Core Pages
 const MainDashboard = lazy(() => import('./pages/MainDashboard.jsx'));
@@ -26,6 +26,8 @@ const DepositPage = lazy(() => import('./pages/DepositPage.jsx'));
 const WithdrawPage = lazy(() => import('./pages/WithdrawPage.jsx'));
 const TransactionHistoryPage = lazy(() => import('./pages/TransactionHistoryPage.jsx'));
 const DuelHistoryPage = lazy(() => import('./pages/DuelHistoryPage.jsx'));
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage.jsx'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage.jsx'));
 
 // Lazy-loaded Game-Specific Pages (Rivals)
 const RivalsDashboard = lazy(() => import('./pages/games/rivals/RivalsDashboard.jsx'));
@@ -48,7 +50,6 @@ const ProtectedRoute = ({ children, requireGameProfile = null }) => {
 
     if (!user) return <Navigate to="/signin" state={{ from: location }} replace />;
 
-    // [NEW] Force user to set a username if they haven't yet.
     if (!user.is_username_set && location.pathname !== '/set-username') {
         return <Navigate to="/set-username" replace />;
     }
@@ -91,6 +92,8 @@ const App = () => {
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/verification-notice" element={<VerificationNoticePage />} />
                     <Route path="/forbidden" element={<ForbiddenPage />} />
+                    <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
                     <Route path="/set-username" element={<ProtectedRoute><SetUsernamePage /></ProtectedRoute>} />
 
