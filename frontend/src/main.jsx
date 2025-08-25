@@ -26,6 +26,10 @@ style.innerHTML = `
         --btn-secondary-bg: #30363d;
         --btn-secondary-hover-bg: #484f58;
     }
+    /* [FIXED] Set a smaller base font size for the entire application to scale down all rem-based units. */
+    html {
+        font-size: 87.5%; /* 14px base instead of 16px */
+    }
     body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-family); margin: 0; }
     .widget { background: var(--widget-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--widget-border); box-shadow: var(--widget-shadow); padding: 1.5rem; border-radius: 1rem; }
     .widget-title { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; padding-bottom: 1rem; border-bottom: 1px solid var(--divider-color); }
