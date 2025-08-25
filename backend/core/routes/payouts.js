@@ -1,9 +1,10 @@
 // backend/core/routes/payouts.js
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const db = require('../../database/database');
 const { authenticateToken, handleValidationErrors } = require('../../middleware/auth');
 const crypto = require('crypto');
+const { sendCryptoPayout } = require('../services/cryptoPayoutService');
 
 const router = express.Router();
 
@@ -42,9 +43,9 @@ router.post('/request-crypto',
             await client.query('UPDATE users SET gems = gems - $1 WHERE id = $2', [gemAmount, userId]);
             
             await client.query(
-                `INSERT INTO payout_requests (id, user_id, type, provider, amount_gems, amount_usd, fee_usd, destination_address, status)
-                 VALUES ($1, $2, 'crypto', 'direct_node', $3, $4, 0, $5, 'awaiting_approval')`,
-                [payoutRequestId, userId, gemAmount, amountUsd, recipientAddress]
+                `INSERT INTO payout_requests (id, user_id, type, provider, amount_gems, amount_usd, fee_usd, destination_address, token_type, status)
+                 VALUES ($1, $2, 'crypto', 'direct_node', $3, $4, 0, $5, $6, 'awaiting_approval')`,
+                [payoutRequestId, userId, gemAmount, amountUsd, recipientAddress, tokenType]
             );
 
             await client.query('COMMIT');
@@ -121,7 +122,7 @@ router.put('/update-request/:id', authenticateToken,
             const newTokenType = tokenType || request.tokenType;
             
             await db.query(
-                "UPDATE payout_requests SET destination_address = $1, tokenType = $2 WHERE id = $3",
+                "UPDATE payout_requests SET destination_address = $1, token_type = $2 WHERE id = $3",
                 [newAddress, newTokenType, requestId]
             );
 
@@ -130,6 +131,64 @@ router.put('/update-request/:id', authenticateToken,
         } catch (error) {
             console.error("Update Withdrawal Details Error:", error);
             res.status(500).json({ message: 'An internal server error occurred.' });
+        }
+    }
+);
+
+router.post('/:id/confirm-and-send',
+    authenticateToken,
+    param('id').isUUID(),
+    handleValidationErrors,
+    async (req, res) => {
+        const requestId = req.params.id;
+        const userId = req.user.userId;
+        const client = await db.getPool().connect();
+
+        try {
+            await client.query('BEGIN');
+            const { rows: [request] } = await client.query(
+                "SELECT * FROM payout_requests WHERE id = $1 AND user_id = $2 AND status = 'approved' FOR UPDATE",
+                [requestId, userId]
+            );
+
+            if (!request) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ message: 'Approved withdrawal request not found or you are not the owner.' });
+            }
+
+            await client.query("UPDATE payout_requests SET status = 'processing', updated_at = NOW() WHERE id = $1", [requestId]);
+            
+            try {
+                const txHash = await sendCryptoPayout(request.destination_address, request.amount_usd, request.token_type);
+                
+                await client.query(
+                    "UPDATE payout_requests SET status = 'completed', provider_payout_id = $1, updated_at = NOW() WHERE id = $2",
+                    [txHash, requestId]
+                );
+
+                await client.query('COMMIT');
+                res.status(200).json({ message: 'Withdrawal confirmed and is now being processed. You will receive the funds shortly.' });
+
+            } catch (payoutError) {
+                console.error(`[Payout Execution] Failed for request ${requestId}:`, payoutError);
+                
+                await client.query("UPDATE payout_requests SET status = 'failed', updated_at = NOW() WHERE id = $1", [requestId]);
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [request.amount_gems, userId]);
+                
+                await client.query(
+                    `INSERT INTO inbox_messages (user_id, type, title, message, reference_id) VALUES ($1, 'withdrawal_failed', 'Withdrawal Failed', 'Your request to withdraw ' || $2 || ' gems failed during processing. The gems have been refunded to your account.', $3)`,
+                    [userId, request.amount_gems, requestId]
+                );
+
+                await client.query('COMMIT');
+                return res.status(500).json({ message: 'Failed to process the payout. Your gems have been refunded.' });
+            }
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error("Confirm Withdrawal Error:", error);
+            res.status(500).json({ message: 'An internal server error occurred.' });
+        } finally {
+            client.release();
         }
     }
 );
