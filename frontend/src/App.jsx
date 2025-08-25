@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import FeatureGuard from './components/FeatureGuard.jsx';
+import MainLayout from './components/MainLayout.jsx'; // Import the new layout
 
 // Core Pages
 import SignInPage from './pages/SignInPage.jsx';
@@ -18,6 +19,8 @@ import BanNotice from './pages/BanNotice.jsx';
 import TranscriptViewerPage from './pages/TranscriptViewerPage.jsx';
 import TicketTranscriptViewerPage from './pages/TicketTranscriptViewerPage.jsx';
 import SetUsernamePage from './pages/SetUsernamePage.jsx';
+import TermsOfServicePage from './pages/TermsOfServicePage.jsx';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
 
 // Lazy-loaded Core Pages
 const MainDashboard = lazy(() => import('./pages/MainDashboard.jsx'));
@@ -26,8 +29,6 @@ const DepositPage = lazy(() => import('./pages/DepositPage.jsx'));
 const WithdrawPage = lazy(() => import('./pages/WithdrawPage.jsx'));
 const TransactionHistoryPage = lazy(() => import('./pages/TransactionHistoryPage.jsx'));
 const DuelHistoryPage = lazy(() => import('./pages/DuelHistoryPage.jsx'));
-const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage.jsx'));
-const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage.jsx'));
 
 // Lazy-loaded Game-Specific Pages (Rivals)
 const RivalsDashboard = lazy(() => import('./pages/games/rivals/RivalsDashboard.jsx'));
@@ -84,6 +85,7 @@ const App = () => {
         <ErrorBoundary>
             <Suspense fallback={<Loader fullScreen />}>
                 <Routes>
+                    {/* Public Routes */}
                     <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/signin" />} />
                     <Route path="/signin" element={!user ? <SignInPage /> : <Navigate to="/dashboard" />} />
                     <Route path="/signup" element={!user ? <SignUpPage /> : <Navigate to="/dashboard" />} />
@@ -94,25 +96,26 @@ const App = () => {
                     <Route path="/forbidden" element={<ForbiddenPage />} />
                     <Route path="/terms-of-service" element={<TermsOfServicePage />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-
-                    <Route path="/set-username" element={<ProtectedRoute><SetUsernamePage /></ProtectedRoute>} />
-
-                    <Route path="/dashboard" element={<ProtectedRoute><MainDashboard /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-                    <Route path="/deposit" element={<ProtectedRoute><FeatureGuard featureName="deposits"><DepositPage /></FeatureGuard></ProtectedRoute>} />
-                    <Route path="/withdraw" element={<ProtectedRoute><FeatureGuard featureName="withdrawals"><WithdrawPage /></FeatureGuard></ProtectedRoute>} />
-                    <Route path="/history" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
-                    <Route path="/duel-history" element={<ProtectedRoute><DuelHistoryPage /></ProtectedRoute>} />
-
-                    <Route path="/games/rivals/link" element={<ProtectedRoute><RivalsLinkPage /></ProtectedRoute>} />
-                    <Route path="/games/rivals/dashboard" element={<ProtectedRoute requireGameProfile="rivals"><RivalsDashboard /></ProtectedRoute>} />
-                    
                     <Route path="/transcripts/:duelId" element={<TranscriptViewerPage />} />
                     <Route path="/transcripts/ticket/:ticketId" element={<TicketTranscriptViewerPage />} />
+
+                    {/* Protected Routes with Main Layout */}
+                    <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+                        <Route path="/set-username" element={<SetUsernamePage />} />
+                        <Route path="/dashboard" element={<MainDashboard />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/deposit" element={<FeatureGuard featureName="deposits"><DepositPage /></FeatureGuard>} />
+                        <Route path="/withdraw" element={<FeatureGuard featureName="withdrawals"><WithdrawPage /></FeatureGuard>} />
+                        <Route path="/history" element={<TransactionHistoryPage />} />
+                        <Route path="/duel-history" element={<DuelHistoryPage />} />
+                        <Route path="/games/rivals/dashboard" element={<ProtectedRoute requireGameProfile="rivals"><RivalsDashboard /></ProtectedRoute>} />
+                        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                        <Route path="/admin/system-controls" element={<AdminRoute masterOnly={true}><AdminSystemControlsPage /></AdminRoute>} />
+                        <Route path="/admin/games/rivals/tournaments/create" element={<AdminRoute><RivalsTournamentCreatePage /></AdminRoute>} />
+                    </Route>
                     
-                    <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminDashboard /></AdminRoute></ProtectedRoute>} />
-                    <Route path="/admin/system-controls" element={<ProtectedRoute><AdminRoute masterOnly={true}><AdminSystemControlsPage /></AdminRoute></ProtectedRoute>} />
-                    <Route path="/admin/games/rivals/tournaments/create" element={<ProtectedRoute><AdminRoute><RivalsTournamentCreatePage /></AdminRoute></ProtectedRoute>} />
+                    {/* Standalone Protected Routes (No Main Layout) */}
+                    <Route path="/games/rivals/link" element={<ProtectedRoute><RivalsLinkPage /></ProtectedRoute>} />
                     
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
