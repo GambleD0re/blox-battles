@@ -2,13 +2,14 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const db = require('../database/database');
-const { authenticateToken, isAdmin, isMasterAdmin, handleValidationErrors } = require('../middleware/auth');
+const { authenticateToken, isAdmin, isMasterAdmin, handleValidationErrors, authenticateBot } = require('../middleware/auth');
 const { getLogs } = require('../middleware/botLogger');
 const { sendInboxRefresh } = require('../core/services/notificationService');
 
 const router = express.Router();
 
-router.get('/user-lookup/:discordId', authenticateToken, isAdmin, param('discordId').isString(), handleValidationErrors, async (req, res) => {
+// [FIXED] Replaced user authentication with bot authentication for this bot-specific endpoint.
+router.get('/user-lookup/:discordId', authenticateBot, param('discordId').isString(), handleValidationErrors, async (req, res) => {
     try {
         const { discordId } = req.params;
         const { rows: [user] } = await db.query(
