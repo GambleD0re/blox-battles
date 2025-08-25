@@ -14,8 +14,10 @@ const DiscordLinkNotification = ({ notification, onRespond }) => (
             <p className="text-sm text-gray-400">Link your account to <span className="font-bold text-gray-300">{notification.data.message}</span>?</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => onRespond(notification.data.id, 'decline')} className="btn btn-danger !py-1 !px-3 !text-sm !mt-0">Decline</button>
-            <button onClick={() => onRespond(notification.data.id, 'confirm')} className="btn btn-primary !py-1 !px-3 !text-sm !mt-0">Confirm</button>
+            {/* [FIXED] Changed notification.data.id to notification.id */}
+            <button onClick={() => onRespond(notification.id, 'decline')} className="btn btn-danger !py-1 !px-3 !text-sm !mt-0">Decline</button>
+            {/* [FIXED] Changed notification.data.id to notification.id */}
+            <button onClick={() => onRespond(notification.id, 'confirm')} className="btn btn-primary !py-1 !px-3 !text-sm !mt-0">Confirm</button>
         </div>
     </NotificationItem>
 );
@@ -41,7 +43,6 @@ const MainInbox = ({ notifications, onRespondToLink, onCancelWithdrawal }) => {
             case 'withdrawal_request':
                 return <WithdrawalNotification key={notification.id} notification={notification} onCancel={onCancelWithdrawal} />;
             default:
-                // This can be expanded with more notification types later
                 return null;
         }
     };
