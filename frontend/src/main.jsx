@@ -29,10 +29,8 @@ style.innerHTML = `
     html {
         font-size: 87.5%;
     }
-    /* [FIXED] Ensure the background covers the full viewport height on all pages. */
     html, body, #root {
         height: 100%;
-        min-height: 100vh;
     }
     body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-family); margin: 0; }
     .widget { background: var(--widget-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--widget-border); box-shadow: var(--widget-shadow); padding: 1.5rem; border-radius: 1rem; }
