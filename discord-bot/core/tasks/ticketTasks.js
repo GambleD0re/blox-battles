@@ -53,7 +53,7 @@ async function handleCloseTicket(client, task) {
 
     const channel = await client.channels.fetch(channelId).catch(() => null);
     if (!channel) {
-        console.warn(`[TICKETS] Channel ${channelId} not found for closing ticket ${ticketId}.`);
+        console.warn(`[TICKETS] Channel ${channelId} not found for closing ticket ${ticketId}. The channel may have been manually deleted.`);
         return;
     }
 
@@ -62,6 +62,8 @@ async function handleCloseTicket(client, task) {
     const userDiscordId = userIdMatch ? userIdMatch[1] : null;
 
     const transcriptContent = await generateTranscript(channel);
+    
+    // Ensure transcript is saved before deleting the channel
     await apiClient.post(`/tickets/${ticketId}/transcript`, { content: transcriptContent });
 
     if (userDiscordId) {
@@ -74,13 +76,12 @@ async function handleCloseTicket(client, task) {
                 .addFields({ name: 'View Transcript', value: `You can view the conversation [here](${FRONTEND_URL}/transcripts/ticket/${ticketId}).` })
                 .setTimestamp();
             if (reason) dmEmbed.addFields({ name: 'Reason', value: reason });
-            await ticketCreator.send({ embeds: [dmEmbed] }).catch(err => console.warn(`Could not DM user ${userDiscordId}:`, err));
+            await ticketCreator.send({ embeds: [dmEmbed] }).catch(err => console.warn(`Could not DM user ${userDiscordId}:`, err.message));
         }
     }
     
     await channel.delete(`Ticket ${ticketId} closed by ${closedBy}`);
 }
-
 
 module.exports = { 
     handleCreateTicketChannel,
