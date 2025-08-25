@@ -15,7 +15,7 @@ const ticketRoutes = require('./tickets.js');
 const transcriptRoutes = require('./transcripts.js');
 const duelHistoryRoutes = require('./duelHistory.js');
 const taskRoutes = require('./tasks.js');
-//const logRoutes = require('./log.js');
+const logRoutes = require('./log.js');
 
 // Game-specific routes for Rivals
 const rivalsDuelRoutes = require('../games/rivals/routes/rivalsDuels.js');
