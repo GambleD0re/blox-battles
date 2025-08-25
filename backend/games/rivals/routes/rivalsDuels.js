@@ -134,7 +134,7 @@ router.get('/find-player', authenticateToken, query('roblox_username').trim().no
 
 router.post('/challenge', 
     authenticateToken,
-    checkFeatureFlag('dueling_rivals_direct'), // [MODIFIED] Added feature flag middleware
+    checkFeatureFlag('dueling_rivals_direct'),
     body('opponent_id').isUUID(), 
     body('wager').isInt({ gt: 0 }),
     body('rules.map').trim().escape().notEmpty(),
@@ -145,6 +145,11 @@ router.post('/challenge',
         const challenger_id = req.user.userId;
         const { opponent_id, wager, rules } = req.body;
         const client = await db.getPool().connect();
+
+        if (challenger_id === opponent_id) {
+            return res.status(400).json({ message: "You cannot challenge yourself." });
+        }
+        
         try {
             await client.query('BEGIN');
             
