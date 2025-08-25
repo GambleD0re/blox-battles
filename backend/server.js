@@ -77,15 +77,13 @@ passport.use(new GoogleStrategy({
     const googleId = profile.id;
     const email = profile.emails[0].value;
     try {
-        let userResult = await db.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
-        if (userResult.rows[0]) {
-            return done(null, userResult.rows[0]);
-        }
+        let { rows: [user] } = await db.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+        if (user) return done(null, user);
 
-        userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows[0]) {
-            await db.query('UPDATE users SET google_id = $1, is_email_verified = TRUE WHERE id = $2', [googleId, userResult.rows[0].id]);
-            const { rows: [updatedUser] } = await db.query('SELECT * FROM users WHERE id = $1', [userResult.rows[0].id]);
+        ({ rows: [user] } = await db.query('SELECT * FROM users WHERE email = $1', [email]));
+        if (user) {
+            await db.query('UPDATE users SET google_id = $1, is_email_verified = TRUE WHERE id = $2', [googleId, user.id]);
+            const { rows: [updatedUser] } = await db.query('SELECT * FROM users WHERE id = $1', [user.id]);
             return done(null, updatedUser);
         }
 
@@ -93,7 +91,7 @@ passport.use(new GoogleStrategy({
         const provisionalUsername = `user_${newUserId.substring(0, 8)}`;
         
         await db.query(
-            'INSERT INTO users (id, google_id, email, username, is_admin, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, false, true, false)',
+            'INSERT INTO users (id, google_id, email, username, is_admin, is_master_admin, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, false, false, true, false)',
             [newUserId, googleId, email, provisionalUsername]
         );
         const { rows: [newUser] } = await db.query('SELECT * FROM users WHERE id = $1', [newUserId]);
