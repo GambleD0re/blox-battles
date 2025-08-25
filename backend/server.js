@@ -77,13 +77,15 @@ passport.use(new GoogleStrategy({
     const googleId = profile.id;
     const email = profile.emails[0].value;
     try {
-        let { rows: [user] } = await db.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
-        if (user) return done(null, user);
+        let userResult = await db.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+        if (userResult.rows[0]) {
+            return done(null, userResult.rows[0]);
+        }
 
-        ({ rows: [user] } = await db.query('SELECT * FROM users WHERE email = $1', [email]));
-        if (user) {
-            await db.query('UPDATE users SET google_id = $1, is_email_verified = TRUE WHERE id = $2', [googleId, user.id]);
-            const { rows: [updatedUser] } = await db.query('SELECT * FROM users WHERE id = $1', [user.id]);
+        userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (userResult.rows[0]) {
+            await db.query('UPDATE users SET google_id = $1, is_email_verified = TRUE WHERE id = $2', [googleId, userResult.rows[0].id]);
+            const { rows: [updatedUser] } = await db.query('SELECT * FROM users WHERE id = $1', [userResult.rows[0].id]);
             return done(null, updatedUser);
         }
 
@@ -111,7 +113,6 @@ const wss = initializeWebSocket(server);
 server.listen(PORT, async () => {
     console.log(`Backend API server started on port: ${PORT}`);
 
-    // [MODIFIED] Conditionally start blockchain services
     if (process.env.BLOCKCHAIN_FEATURES_ENABLED !== 'false') {
         console.log('[SYSTEM] Blockchain features are ENABLED. Initializing services...');
         initializePriceFeed();
