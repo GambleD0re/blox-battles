@@ -9,19 +9,27 @@ let ghostFeedTimer = null;
 const WAGERS = [100, 250, 500, 1000, 2500];
 const RIVALS_GAME_ID = 'rivals';
 
+// More efficient search strategy
+const SEARCH_KEYWORDS = ['Player', 'User', 'Gammer', 'Pro', 'Noob', 'King', 'Star', 'Cat', 'Dog', 'Wolf'];
+
 async function getRandomRobloxUser() {
     const MAX_ATTEMPTS = 10;
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
-        const randomId = Math.floor(Math.random() * 3000000000) + 1;
         try {
-            const userApiUrl = `https://users.roblox.com/v1/users/${randomId}`;
-            const userResponse = await fetch(userApiUrl);
-            if (!userResponse.ok) continue;
+            const keyword = SEARCH_KEYWORDS[Math.floor(Math.random() * SEARCH_KEYWORDS.length)];
+            const searchUrl = `https://users.roblox.com/v1/users/search?keyword=${keyword}&limit=100`;
+            
+            const searchResponse = await fetch(searchUrl);
+            if (!searchResponse.ok) continue;
 
-            const userData = await userResponse.json();
-            if (userData.isBanned || !userData.name) continue;
+            const searchData = await searchResponse.json();
+            const potentialUsers = searchData.data.filter(u => !u.isBanned && u.name);
+            if (potentialUsers.length === 0) continue;
+            
+            const randomUser = potentialUsers[Math.floor(Math.random() * potentialUsers.length)];
+            const userId = randomUser.id;
 
-            const thumbApiUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${randomId}&size=150x150&format=Png&isCircular=false`;
+            const thumbApiUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`;
             const thumbResponse = await fetch(thumbApiUrl);
             if (!thumbResponse.ok) continue;
 
@@ -30,9 +38,9 @@ async function getRandomRobloxUser() {
 
             if (avatarInfo && avatarInfo.state === 'Completed' && avatarInfo.imageUrl) {
                 return {
-                    username: userData.name,
+                    username: randomUser.name,
                     avatarUrl: avatarInfo.imageUrl,
-                    robloxId: randomId
+                    robloxId: userId
                 };
             }
         } catch (error) {
@@ -41,6 +49,7 @@ async function getRandomRobloxUser() {
     }
     throw new Error(`Failed to find a valid random Roblox user after ${MAX_ATTEMPTS} attempts.`);
 }
+
 
 async function generateGhostDuel() {
     try {
