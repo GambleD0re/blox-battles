@@ -39,7 +39,13 @@ module.exports = {
                 const subject = interaction.fields.getTextInputValue('ticket_subject_input');
                 const description = interaction.fields.getTextInputValue('ticket_description_input');
                 try {
-                    const response = await apiClient.post('/tickets', { type: ticketType, subject, message: description, discordId: interaction.user.id });
+                    // [FIXED] Call the new, dedicated bot endpoint and send the discordId
+                    const response = await apiClient.post('/discord/tickets', { 
+                        type: ticketType, 
+                        subject, 
+                        message: description, 
+                        discordId: interaction.user.id 
+                    });
                     await interaction.editReply({ content: response.data.message });
                 } catch (error) {
                     await interaction.editReply({ content: `❌ **Error:** ${error.response?.data?.message || 'Failed to create ticket.'}` });
@@ -51,7 +57,7 @@ module.exports = {
                     const response = await apiClient.post('/discord/initiate-link', {
                         username,
                         discordId: interaction.user.id,
-                        discordUsername: interaction.user.username,
+                        discordUsername: interaction.user.globalName || interaction.user.username,
                     });
                     await interaction.editReply({ content: `✅ ${response.data.message} Please check your inbox on the website to confirm.` });
                 } catch (error) {
