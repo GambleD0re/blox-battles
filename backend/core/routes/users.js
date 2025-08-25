@@ -13,7 +13,7 @@ const jwtSecret = process.env.JWT_SECRET;
 router.get('/user-data', authenticateToken, async (req, res) => {
     try {
         const userSql = `
-            SELECT id, email, username, google_id, gems, is_admin, 
+            SELECT id, email, username, google_id, gems, is_admin, is_master_admin,
                    discord_id, discord_username, created_at, password_last_updated, 
                    discord_notifications_enabled, accepting_challenges, status, 
                    ban_reason, ban_applied_at, ban_expires_at, is_email_verified, is_username_set
@@ -56,8 +56,10 @@ router.post('/user/set-username', authenticateToken,
             
             const payload = {
                 userId: user.id,
+                email: user.email,
                 username: username,
                 isAdmin: user.is_admin,
+                isMasterAdmin: user.is_master_admin,
                 is_username_set: true,
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
