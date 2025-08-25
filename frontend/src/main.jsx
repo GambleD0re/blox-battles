@@ -27,7 +27,8 @@ style.innerHTML = `
         --btn-secondary-hover-bg: #484f58;
     }
     html {
-        font-size: 87.5%;
+        /* [FIXED] Scaled UI up slightly for better readability on standard screens. */
+        font-size: 93.75%; /* 15px base */
     }
     html, body, #root {
         height: 100%;
