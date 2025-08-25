@@ -1,13 +1,12 @@
 // backend/core/routes/discord.js
 const express = require('express');
-const { body, param } = require('express-validator'); // [MODIFIED] Added 'param'
+const { body, param } = require('express-validator');
 const db = require('../../database/database');
 const { authenticateToken, authenticateBot, handleValidationErrors } = require('../../middleware/auth');
 const { sendInboxRefresh } = require('../services/notificationService');
 
 const router = express.Router();
 
-// [ADDED] New endpoint for the bot to fetch user profile data
 router.get('/user-profile/:discordId',
     authenticateBot,
     [ param('discordId').isString().notEmpty().withMessage('Discord ID is required.') ],
@@ -15,7 +14,7 @@ router.get('/user-profile/:discordId',
     async (req, res) => {
         const { discordId } = req.params;
         try {
-            const { rows: [user] } = await db.query('SELECT id, username, email, gems, created_at FROM users WHERE discord_id = $1', [discordId]);
+            const { rows: [user] } = await db.query('SELECT id, username, email, gems, created_at, status FROM users WHERE discord_id = $1', [discordId]);
 
             if (!user) {
                 return res.status(404).json({ message: 'No Blox Battles account is linked to this Discord user.' });
@@ -33,6 +32,61 @@ router.get('/user-profile/:discordId',
         } catch (error) {
             console.error("Discord Get User Profile Error:", error);
             res.status(500).json({ message: 'An internal server error occurred.' });
+        }
+    }
+);
+
+// [NEW] Secure endpoint for the bot to create tickets on behalf of a user
+router.post('/tickets',
+    authenticateBot,
+    [
+        body('discordId').isString().notEmpty(),
+        body('type').isIn(['support', 'ban_appeal']),
+        body('subject').trim().notEmpty(),
+        body('message').trim().notEmpty()
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { discordId, type, subject, message } = req.body;
+        const client = await db.getPool().connect();
+
+        try {
+            await client.query('BEGIN');
+            const { rows: [user] } = await client.query('SELECT id FROM users WHERE discord_id = $1', [discordId]);
+            if (!user) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ message: 'No Blox Battles account is linked to this Discord user.' });
+            }
+
+            const { rows: [newTicket] } = await client.query(
+                `INSERT INTO tickets (user_id, type, subject) VALUES ($1, $2, $3) RETURNING id`,
+                [user.id, type, subject]
+            );
+            const ticketId = newTicket.id;
+
+            await client.query(
+                'INSERT INTO ticket_messages (ticket_id, author_id, message) VALUES ($1, $2, $3)',
+                [ticketId, user.id, message]
+            );
+
+            const taskPayload = {
+                ticket_id: ticketId,
+                user_discord_id: discordId,
+                ticket_type: type,
+                subject: subject,
+                description: message
+            };
+            await client.query("INSERT INTO tasks (task_type, payload) VALUES ('CREATE_TICKET_CHANNEL', $1)", [JSON.stringify(taskPayload)]);
+            
+            await client.query('COMMIT');
+            res.status(201).json({ message: 'Support ticket created successfully! A private channel has been opened for you in our Discord server.' });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error("Bot Create Ticket Error:", error);
+            res.status(500).json({ message: 'An internal server error occurred.' });
+        } finally {
+            client.release();
         }
     }
 );
