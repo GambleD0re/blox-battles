@@ -64,6 +64,7 @@ export const getCryptoDepositAddress = (token) => apiRequest('/payments/crypto-a
 export const getCryptoQuote = (amount, network, tokenType, token) => apiRequest('/payments/crypto-quote', 'POST', { amount, network, tokenType }, token);
 export const requestCryptoWithdrawal = (gemAmount, recipientAddress, tokenType, token) => apiRequest('/payouts/request-crypto', 'POST', { gemAmount, recipientAddress, tokenType }, token);
 export const cancelWithdrawalRequest = (requestId, token) => apiRequest(`/payouts/cancel-request/${requestId}`, 'POST', null, token);
+export const confirmAndSendPayout = (payoutId, token) => apiRequest(`/payouts/${payoutId}/confirm-and-send`, 'POST', null, token);
 
 // --- Rivals Game Routes ---
 const RIVALS_PREFIX = '/games/rivals';
@@ -102,8 +103,8 @@ export const unbanUser = (userId, token) => apiRequest(`/admin/users/${userId}/b
 export const deleteUserAccount = (userId, token) => apiRequest(`/admin/users/${userId}`, 'DELETE', null, token);
 export const getAdminPayoutRequests = (token) => apiRequest('/admin/payout-requests', 'GET', null, token);
 export const getAdminUserDetailsForPayout = (userId, payoutId, token) => apiRequest(`/admin/users/${userId}/details-for-payout/${payoutId}`, 'GET', null, token);
-export const approvePayoutRequest = (requestId, token) => apiRequest(`/payouts/requests/${requestId}/approve`, 'POST', null, token);
-export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/payouts/requests/${requestId}/decline`, 'POST', { reason }, token);
+export const approvePayoutRequest = (requestId, token) => apiRequest(`/admin/payout-requests/${requestId}/approve`, 'POST', null, token);
+export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/admin/payout-requests/${requestId}/decline`, 'POST', { reason }, token);
 export const getSystemStatus = (token) => apiRequest('/admin/system-status', 'GET', null, token);
 export const updateSystemStatus = (statusData, token) => apiRequest('/admin/system-status', 'PUT', statusData, token);
 export const createRivalsTournament = (tournamentData, token) => apiRequest(`${RIVALS_PREFIX}/admin/tournaments`, 'POST', tournamentData, token);
