@@ -83,18 +83,43 @@ module.exports = {
                 }
             }
         } else if (interaction.isButton()) {
-            const [action, ticketId] = interaction.customId.split('_');
+            const [action, subAction, ...rest] = interaction.customId.split('_');
 
             if (action === 'ticket') {
-                const subAction = ticketId; // e.g., 'claim', 'close'
+                const ticketId = rest.join('_');
 
-                // Check for staff permission on all ticket actions
                 if (!interaction.member.roles.cache.has(SUPPORT_STAFF_ROLE_ID)) {
                     return interaction.reply({ content: 'You do not have permission to perform this action.', ephemeral: true });
                 }
 
                 if (subAction === 'claim') {
                     await interaction.deferUpdate();
+                    
+                    // [NEW] Rename channel and re-sort category
+                    const channel = interaction.channel;
+                    if (channel.name.startsWith('U-')) {
+                        const newName = channel.name.replace(/^U-/, 'C-');
+                        await channel.setName(newName, 'Ticket Claimed');
+
+                        const category = channel.parent;
+                        if (category) {
+                            try {
+                                const channelsInCategory = Array.from(category.children.cache.values());
+                                const sortedChannels = channelsInCategory.sort((a, b) => a.name.localeCompare(b.name));
+                                
+                                const positionUpdates = sortedChannels.map((ch, index) => ({
+                                    channel: ch.id,
+                                    position: index,
+                                }));
+
+                                await interaction.guild.channels.setPositions(positionUpdates);
+                            } catch (sortError) {
+                                console.error("Could not re-sort ticket channels:", sortError);
+                                // Don't block the rest of the flow if sorting fails
+                            }
+                        }
+                    }
+
                     await interaction.channel.send(`> 🔔 Ticket claimed by ${interaction.user}. They will be with you shortly.`);
                     
                     const originalMessage = interaction.message;
@@ -106,7 +131,7 @@ module.exports = {
 
                 } else if (subAction === 'close') {
                     const modal = new ModalBuilder()
-                        .setCustomId(`ticket_close_modal_${interaction.customId.split('_')[2]}`)
+                        .setCustomId(`ticket_close_modal_${ticketId}`)
                         .setTitle('Close Support Ticket');
                     
                     const reasonInput = new TextInputBuilder()
