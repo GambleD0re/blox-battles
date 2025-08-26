@@ -17,7 +17,9 @@ async function handleCreateTicketChannel(client, task) {
     const categoryChannel = guild.channels.cache.get(SUPPORT_TICKETS_CATEGORY_ID);
     if (!categoryChannel) throw new Error(`Support category with ID ${SUPPORT_TICKETS_CATEGORY_ID} not found.`);
 
-    const channelName = `ticket-${user.user.username}-${ticket_id.substring(0, 4)}`;
+    // [MODIFIED] Changed channel naming convention to use a "U-" prefix for "Unclaimed".
+    const channelName = `U-${user.user.username}-${ticket_id.substring(0, 4)}`;
+    
     const permissionOverwrites = [
         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.EmbedLinks] },
@@ -40,7 +42,6 @@ async function handleCreateTicketChannel(client, task) {
         .setTimestamp()
         .setFooter({ text: `Ticket ID: ${ticket_id}` });
 
-    // [MODIFIED] Re-added the full action row with the "Claim" button
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`ticket_claim_${ticket_id}`).setLabel('Claim Ticket').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`ticket_close_${ticket_id}`).setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
