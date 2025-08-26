@@ -36,7 +36,6 @@ router.get('/user-profile/:discordId',
     }
 );
 
-// [NEW] Secure endpoint for the bot to create tickets on behalf of a user
 router.post('/tickets',
     authenticateBot,
     [
@@ -87,6 +86,26 @@ router.post('/tickets',
             res.status(500).json({ message: 'An internal server error occurred.' });
         } finally {
             client.release();
+        }
+    }
+);
+
+// [NEW] Secure endpoint for the bot to create generic tasks.
+router.post('/tasks',
+    authenticateBot,
+    [
+        body('task_type').isString().notEmpty(),
+        body('payload').isObject()
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { task_type, payload } = req.body;
+        try {
+            await db.query('INSERT INTO tasks (task_type, payload) VALUES ($1, $2)', [task_type, payload]);
+            res.status(201).json({ message: 'Task created successfully.' });
+        } catch (err) {
+            console.error("Bot Create Task Error:", err);
+            res.status(500).json({ message: 'Failed to create task.' });
         }
     }
 );
