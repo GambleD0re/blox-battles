@@ -2,7 +2,7 @@
 const express = require('express');
 const { param } = require('express-validator');
 const db = require('../database/database');
-const { handleValidationErrors } = require('../middleware/auth');
+const { handleValidationErrors, authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,22 +40,39 @@ router.get('/:duelId', param('duelId').isInt(), handleValidationErrors, async (r
     }
 });
 
-router.get('/ticket/:ticketId', param('ticketId').isUUID(), handleValidationErrors, async (req, res) => {
-    try {
-        const { ticketId } = req.params;
-        const sql = `SELECT transcript_content FROM ticket_transcripts WHERE ticket_id = $1::uuid ORDER BY created_at DESC LIMIT 1`;
-        const { rows: [transcript] } = await db.query(sql, [ticketId]);
+router.get('/ticket/:ticketId',
+    authenticateToken,
+    param('ticketId').isUUID(),
+    handleValidationErrors,
+    async (req, res) => {
+        try {
+            const { ticketId } = req.params;
+            const requesterId = req.user.userId;
+            const isRequesterAdmin = req.user.isAdmin;
 
-        if (!transcript) {
-            return res.status(404).json({ message: 'Ticket transcript not found.' });
+            const { rows: [ticket] } = await db.query('SELECT user_id FROM tickets WHERE id = $1', [ticketId]);
+            if (!ticket) {
+                return res.status(404).json({ message: 'Ticket not found.' });
+            }
+
+            if (!isRequesterAdmin && requesterId !== ticket.user_id) {
+                return res.status(403).json({ message: 'You do not have permission to view this transcript.' });
+            }
+
+            const sql = `SELECT transcript_content FROM ticket_transcripts WHERE ticket_id = $1::uuid ORDER BY created_at DESC LIMIT 1`;
+            const { rows: [transcript] } = await db.query(sql, [ticketId]);
+
+            if (!transcript) {
+                return res.status(404).json({ message: 'Ticket transcript not found.' });
+            }
+
+            res.header('Content-Type', 'text/plain');
+            res.send(transcript.transcript_content);
+        } catch (err) {
+            console.error("Fetch Ticket Transcript Error:", err);
+            res.status(500).json({ message: 'Failed to fetch ticket transcript.' });
         }
-
-        res.header('Content-Type', 'text/plain');
-        res.send(transcript.transcript_content);
-    } catch (err) {
-        console.error("Fetch Ticket Transcript Error:", err);
-        res.status(500).json({ message: 'Failed to fetch ticket transcript.' });
     }
-});
+);
 
 module.exports = router;
