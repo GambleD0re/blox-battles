@@ -15,6 +15,11 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         const text = await response.text();
         
+        // For plain text responses like transcripts, return the text directly on success
+        if (response.ok && response.headers.get("Content-Type")?.includes("text/plain")) {
+            return text;
+        }
+
         let data;
         try {
             data = JSON.parse(text);
@@ -89,7 +94,8 @@ export const getLeaderboard = (gameId, token) => apiRequest(`/games/${gameId}/le
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
 export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
-export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`, 'GET', null, null);
+export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`); // Public
+export const getTicketTranscript = (ticketId, token) => apiRequest(`/transcripts/ticket/${ticketId}`, 'GET', null, token); // Secure
 
 // --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
@@ -103,8 +109,8 @@ export const unbanUser = (userId, token) => apiRequest(`/admin/users/${userId}/b
 export const deleteUserAccount = (userId, token) => apiRequest(`/admin/users/${userId}`, 'DELETE', null, token);
 export const getAdminPayoutRequests = (token) => apiRequest('/admin/payout-requests', 'GET', null, token);
 export const getAdminUserDetailsForPayout = (userId, payoutId, token) => apiRequest(`/admin/users/${userId}/details-for-payout/${payoutId}`, 'GET', null, token);
-export const approvePayoutRequest = (requestId, token) => apiRequest(`/admin/payout-requests/${requestId}/approve`, 'POST', null, token);
-export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/admin/payout-requests/${requestId}/decline`, 'POST', { reason }, token);
+export const approvePayoutRequest = (requestId, token) => apiRequest(`/admin/payouts/requests/${requestId}/approve`, 'POST', null, token);
+export const declinePayoutRequest = (requestId, reason, token) => apiRequest(`/admin/payouts/requests/${requestId}/decline`, 'POST', { reason }, token);
 export const getSystemStatus = (token) => apiRequest('/admin/system-status', 'GET', null, token);
 export const updateSystemStatus = (statusData, token) => apiRequest('/admin/system-status', 'PUT', statusData, token);
 export const createRivalsTournament = (tournamentData, token) => apiRequest(`${RIVALS_PREFIX}/admin/tournaments`, 'POST', tournamentData, token);
