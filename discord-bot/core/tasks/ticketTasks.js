@@ -20,11 +20,11 @@ async function handleCreateTicketChannel(client, task) {
     const channelName = `ticket-${user.user.username}-${ticket_id.substring(0, 4)}`;
     const permissionOverwrites = [
         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.EmbedLinks] },
         { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] },
     ];
     if (SUPPORT_STAFF_ROLE_ID) {
-        permissionOverwrites.push({ id: SUPPORT_STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] });
+        permissionOverwrites.push({ id: SUPPORT_STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageMessages] });
     }
 
     const channel = await guild.channels.create({
@@ -40,7 +40,11 @@ async function handleCreateTicketChannel(client, task) {
         .setTimestamp()
         .setFooter({ text: `Ticket ID: ${ticket_id}` });
 
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`ticket_close_${ticket_id}`).setLabel('Close Ticket').setStyle(ButtonStyle.Danger));
+    // [MODIFIED] Re-added the full action row with the "Claim" button
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`ticket_claim_${ticket_id}`).setLabel('Claim Ticket').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`ticket_close_${ticket_id}`).setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
+    );
     
     await channel.send({ content: `<@${user.id}> ${SUPPORT_STAFF_ROLE_ID ? `<@&${SUPPORT_STAFF_ROLE_ID}>` : ''}`, embeds: [embed], components: [row] });
     await apiClient.post(`/tickets/${ticket_id}/channel`, { channelId: channel.id });
@@ -57,7 +61,6 @@ async function handleCloseTicket(client, task) {
         return;
     }
 
-    // [FIXED] Post a final message with the reason BEFORE generating the transcript
     const closingEmbed = new EmbedBuilder()
         .setColor(0xED4245)
         .setTitle('Ticket Closed')
@@ -69,8 +72,16 @@ async function handleCloseTicket(client, task) {
     }
     
     await channel.send({ embeds: [closingEmbed] });
-    await channel.permissionOverwrites.edit(channel.topic.match(/User ID: (\d+)/)[1], { SendMessages: false });
-
+    
+    try {
+        const topic = channel.topic;
+        const userIdMatch = topic.match(/User ID: (\d+)/);
+        if (userIdMatch && userIdMatch[1]) {
+            await channel.permissionOverwrites.edit(userIdMatch[1], { SendMessages: false });
+        }
+    } catch(err) {
+        console.warn(`[TICKETS] Could not lock channel for user: ${err.message}`);
+    }
 
     const topic = channel.topic;
     const userIdMatch = topic.match(/User ID: (\d+)/);
@@ -93,7 +104,6 @@ async function handleCloseTicket(client, task) {
         }
     }
     
-    // Delay deletion slightly to ensure messages are seen
     await new Promise(resolve => setTimeout(resolve, 10000));
     await channel.delete(`Ticket ${ticketId} closed by ${closedBy}`);
 }
