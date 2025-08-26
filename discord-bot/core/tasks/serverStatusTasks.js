@@ -52,12 +52,14 @@ async function handleServerStatusUpdate(client, task) {
             embed
                 .setColor(0x3BA55D) // Green
                 .setDescription(`🟢 The **${config.fullName}** region is now **online**!`);
-            await voiceChannel.setName(`🟢 | ${config.fullName} (Online)`);
+            // [FIXED] Removed "(Online)" from the channel name
+            await voiceChannel.setName(`🟢 | ${config.fullName}`);
         } else {
             embed
                 .setColor(0xED4245) // Red
                 .setDescription(`🔴 The **${config.fullName}** region has gone **offline**.`);
-            await voiceChannel.setName(`🔴 | ${config.fullName} (Offline)`);
+            // [FIXED] Removed "(Offline)" from the channel name
+            await voiceChannel.setName(`🔴 | ${config.fullName}`);
         }
 
         await pingChannel.send({ content: `<@&${config.roleId}>`, embeds: [embed] });
