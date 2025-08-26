@@ -18,6 +18,7 @@ const { startMatchmakingService } = require('./core/services/matchmakingService'
 const { initializePriceFeed } = require('./core/services/priceFeedService');
 const { startTransactionListener } = require('./core/services/transactionListenerService');
 const { startConfirmationService } = require('./core/services/transactionConfirmationService');
+const { startServerStatusMonitor } = require('./core/services/serverStatusMonitor'); // [NEW] Import the new service
 
 const app = express();
 const server = http.createServer(app);
@@ -122,4 +123,5 @@ server.listen(PORT, async () => {
     
     startGhostFeed(wss);
     startMatchmakingService();
+    startServerStatusMonitor(); // [NEW] Start the status monitor
 });
