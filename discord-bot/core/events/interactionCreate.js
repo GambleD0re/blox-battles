@@ -39,7 +39,6 @@ module.exports = {
                 const subject = interaction.fields.getTextInputValue('ticket_subject_input');
                 const description = interaction.fields.getTextInputValue('ticket_description_input');
                 try {
-                    // [FIXED] Call the new, dedicated bot endpoint and send the discordId
                     const response = await apiClient.post('/discord/tickets', { 
                         type: ticketType, 
                         subject, 
@@ -63,18 +62,43 @@ module.exports = {
                 } catch (error) {
                     await interaction.editReply({ content: `❌ ${error.response?.data?.message || 'An error occurred.'}` });
                 }
-            }
-        } else if (interaction.isButton()) {
-            if (interaction.customId.startsWith('ticket_close_')) {
-                const ticketId = interaction.customId.split('_')[2];
+            } else if (interaction.customId.startsWith('ticket_close_modal_')) { // [NEW] Handler for the close reason modal
+                await interaction.deferReply({ content: 'Closing and archiving ticket...', ephemeral: true });
+                const ticketId = interaction.customId.split('_')[3];
+                const reason = interaction.fields.getTextInputValue('ticket_close_reason');
+                
                 try {
-                    await interaction.deferReply({ content: 'Closing ticket...', ephemeral: true });
-                    const payload = { ticketId, channelId: interaction.channel.id, closedBy: interaction.user.tag };
+                    const payload = { 
+                        ticketId, 
+                        channelId: interaction.channel.id, 
+                        closedBy: interaction.user.tag,
+                        reason: reason || 'No reason provided.' // Ensure reason is never empty
+                    };
                     await apiClient.post('/tasks', { task_type: 'CLOSE_TICKET', payload });
                     await interaction.editReply({ content: 'Ticket has been queued for archival.' });
                 } catch (error) {
-                    await interaction.editReply({ content: `❌ **Error:** ${error.response?.data?.message || 'Failed to close ticket.'}` });
+                    await interaction.editReply({ content: `❌ **Error:** ${error.response?.data?.message || 'Failed to queue ticket for closure.'}` });
                 }
+            }
+        } else if (interaction.isButton()) {
+            if (interaction.customId.startsWith('ticket_close_')) {
+                // [FIXED] Instead of closing directly, this now shows a modal to ask for a reason.
+                const ticketId = interaction.customId.split('_')[2];
+                const modal = new ModalBuilder()
+                    .setCustomId(`ticket_close_modal_${ticketId}`)
+                    .setTitle('Close Support Ticket');
+                
+                const reasonInput = new TextInputBuilder()
+                    .setCustomId('ticket_close_reason')
+                    .setLabel("Reason for Closing (Optional)")
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('e.g., Issue resolved.')
+                    .setRequired(false);
+
+                const actionRow = new ActionRowBuilder().addComponents(reasonInput);
+                modal.addComponents(actionRow);
+
+                await interaction.showModal(modal);
             }
         }
     },
