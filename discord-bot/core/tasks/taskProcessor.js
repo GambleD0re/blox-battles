@@ -2,6 +2,7 @@
 const { apiClient } = require('../utils/apiClient');
 const { handleCreateTicketChannel, handleCloseTicket } = require('./ticketTasks');
 const { handleDuelResult, handleDmNotification } = require('./duelTasks');
+const { handleServerStatusUpdate } = require('./serverStatusTasks'); // [NEW] Import the new handler
 
 const TASK_FETCH_INTERVAL_MS = (process.env.UPDATE_INTERVAL_SECONDS ? parseInt(process.env.UPDATE_INTERVAL_SECONDS, 10) : 15) * 1000;
 
@@ -13,6 +14,7 @@ const taskHandlers = {
     'SEND_DUEL_CHALLENGE_DM': (client, task) => handleDmNotification(client, task, 'duel_challenge'),
     'SEND_DUEL_ACCEPTED_DM': (client, task) => handleDmNotification(client, task, 'duel_accepted'),
     'SEND_DUEL_STARTED_DM': (client, task) => handleDmNotification(client, task, 'duel_started'),
+    'ANNOUNCE_SERVER_STATUS': handleServerStatusUpdate, // [NEW] Register the new handler
 };
 
 async function processTasks(client) {
