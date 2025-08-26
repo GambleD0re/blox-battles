@@ -1,7 +1,8 @@
-// frontend/src/pages/TranscriptViewerPage.jsx
+// frontend/src/pages/TicketTranscriptViewerPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import * as api from '../services/api'; // Use the API service
+import { useAuth } from '../context/AuthContext';
+import * as api from '../services/api';
 
 const Loader = () => (
     <div className="flex items-center justify-center p-12">
@@ -9,52 +10,56 @@ const Loader = () => (
     </div>
 );
 
-const TranscriptViewerPage = () => {
-    const { duelId } = useParams();
-    const [duel, setDuel] = useState(null);
+const TicketTranscriptViewerPage = () => {
+    const { ticketId } = useParams();
+    const { token } = useAuth();
+    const [transcript, setTranscript] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchTranscript = async () => {
+            if (!token) {
+                setError('You must be logged in to view a ticket transcript.');
+                setIsLoading(false);
+                return;
+            }
+
             try {
-                const data = await api.getTranscript(duelId);
-                setDuel(data);
+                const data = await api.getTicketTranscript(ticketId, token);
+                setTranscript(data);
             } catch (err) {
-                setError(err.message);
+                if (err.response?.status === 403) {
+                    setError('Access Denied: You do not have permission to view this transcript.');
+                } else {
+                    setError(err.message || 'An unknown error occurred.');
+                }
             } finally {
                 setIsLoading(false);
             }
         };
         fetchTranscript();
-    }, [duelId]);
-    
-    const renderEvent = (event, index) => {
-        // Simple JSON stringify for consistent display
-        return <pre key={index} className="whitespace-pre-wrap break-words text-sm p-2 bg-gray-800/50 rounded">{JSON.stringify(event, null, 2)}</pre>
-    };
+    }, [ticketId, token]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 <header className="flex justify-between items-center mb-6 pb-4 border-b border-gray-700">
                     <div>
-                        <h1 className="text-3xl font-bold">{duel?.game_name || ''} Duel Transcript</h1>
-                        <p className="text-gray-500">ID: {duelId}</p>
+                        <h1 className="text-3xl font-bold">Ticket Transcript</h1>
+                        <p className="text-gray-500">ID: {ticketId}</p>
                     </div>
                     <Link to="/dashboard" className="btn btn-secondary !mt-0">Back to Blox Battles</Link>
                 </header>
 
                 {isLoading && <Loader />}
                 {error && <div className="p-4 text-center bg-red-900/50 text-red-300 rounded-lg">{error}</div>}
-                {duel && (
+                {transcript && (
                     <div className="widget">
-                        <div className="p-4 bg-black rounded-lg font-mono max-h-[60vh] overflow-y-auto space-y-2">
-                            {duel.transcript && duel.transcript.length > 0 ? (
-                                duel.transcript.map(renderEvent)
-                            ) : (
-                                <p className="text-gray-500">No events recorded in this transcript.</p>
-                            )}
+                        <div className="p-4 bg-black rounded-lg font-mono max-h-[70vh] overflow-y-auto">
+                            <pre className="whitespace-pre-wrap break-words text-sm text-gray-300">
+                                {transcript}
+                            </pre>
                         </div>
                     </div>
                 )}
@@ -63,4 +68,4 @@ const TranscriptViewerPage = () => {
     );
 };
 
-export default TranscriptViewerPage;
+export default TicketTranscriptViewerPage;
