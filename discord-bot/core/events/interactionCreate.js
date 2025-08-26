@@ -1,6 +1,8 @@
 // discord-bot/core/events/interactionCreate.js
-const { Events, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Events, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { apiClient } = require('../utils/apiClient');
+
+const { SUPPORT_STAFF_ROLE_ID } = process.env;
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -74,7 +76,6 @@ module.exports = {
                         closedBy: interaction.user.tag,
                         reason: reason || 'No reason provided.'
                     };
-                    // [FIXED] Call the new, dedicated bot endpoint for creating tasks.
                     await apiClient.post('/discord/tasks', { task_type: 'CLOSE_TICKET', payload });
                     await interaction.editReply({ content: 'Ticket has been queued for archival.' });
                 } catch (error) {
@@ -82,23 +83,44 @@ module.exports = {
                 }
             }
         } else if (interaction.isButton()) {
-            if (interaction.customId.startsWith('ticket_close_')) {
-                const ticketId = interaction.customId.split('_')[2];
-                const modal = new ModalBuilder()
-                    .setCustomId(`ticket_close_modal_${ticketId}`)
-                    .setTitle('Close Support Ticket');
-                
-                const reasonInput = new TextInputBuilder()
-                    .setCustomId('ticket_close_reason')
-                    .setLabel("Reason for Closing (Optional)")
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('e.g., Issue resolved.')
-                    .setRequired(false);
+            const [action, ticketId] = interaction.customId.split('_');
 
-                const actionRow = new ActionRowBuilder().addComponents(reasonInput);
-                modal.addComponents(actionRow);
+            if (action === 'ticket') {
+                const subAction = ticketId; // e.g., 'claim', 'close'
 
-                await interaction.showModal(modal);
+                // Check for staff permission on all ticket actions
+                if (!interaction.member.roles.cache.has(SUPPORT_STAFF_ROLE_ID)) {
+                    return interaction.reply({ content: 'You do not have permission to perform this action.', ephemeral: true });
+                }
+
+                if (subAction === 'claim') {
+                    await interaction.deferUpdate();
+                    await interaction.channel.send(`> 🔔 Ticket claimed by ${interaction.user}. They will be with you shortly.`);
+                    
+                    const originalMessage = interaction.message;
+                    const updatedButtons = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('ticket_claimed').setLabel('Claimed').setStyle(ButtonStyle.Success).setDisabled(true),
+                        new ButtonBuilder().setCustomId(interaction.customId.replace('claim', 'close')).setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
+                    );
+                    await originalMessage.edit({ components: [updatedButtons] });
+
+                } else if (subAction === 'close') {
+                    const modal = new ModalBuilder()
+                        .setCustomId(`ticket_close_modal_${interaction.customId.split('_')[2]}`)
+                        .setTitle('Close Support Ticket');
+                    
+                    const reasonInput = new TextInputBuilder()
+                        .setCustomId('ticket_close_reason')
+                        .setLabel("Reason for Closing (Optional)")
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setPlaceholder('e.g., Issue resolved.')
+                        .setRequired(false);
+
+                    const actionRow = new ActionRowBuilder().addComponents(reasonInput);
+                    modal.addComponents(actionRow);
+
+                    await interaction.showModal(modal);
+                }
             }
         }
     },
