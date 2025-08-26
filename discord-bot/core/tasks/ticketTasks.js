@@ -53,17 +53,30 @@ async function handleCloseTicket(client, task) {
 
     const channel = await client.channels.fetch(channelId).catch(() => null);
     if (!channel) {
-        console.warn(`[TICKETS] Channel ${channelId} not found for closing ticket ${ticketId}. The channel may have been manually deleted.`);
+        console.warn(`[TICKETS] Channel ${channelId} not found for closing ticket ${ticketId}.`);
         return;
     }
+
+    // [FIXED] Post a final message with the reason BEFORE generating the transcript
+    const closingEmbed = new EmbedBuilder()
+        .setColor(0xED4245)
+        .setTitle('Ticket Closed')
+        .setDescription(`This ticket was closed by **${closedBy}**.`)
+        .setTimestamp();
+
+    if (reason) {
+        closingEmbed.addFields({ name: 'Reason', value: reason });
+    }
+    
+    await channel.send({ embeds: [closingEmbed] });
+    await channel.permissionOverwrites.edit(channel.topic.match(/User ID: (\d+)/)[1], { SendMessages: false });
+
 
     const topic = channel.topic;
     const userIdMatch = topic.match(/User ID: (\d+)/);
     const userDiscordId = userIdMatch ? userIdMatch[1] : null;
 
     const transcriptContent = await generateTranscript(channel);
-    
-    // Ensure transcript is saved before deleting the channel
     await apiClient.post(`/tickets/${ticketId}/transcript`, { content: transcriptContent });
 
     if (userDiscordId) {
@@ -76,10 +89,12 @@ async function handleCloseTicket(client, task) {
                 .addFields({ name: 'View Transcript', value: `You can view the conversation [here](${FRONTEND_URL}/transcripts/ticket/${ticketId}).` })
                 .setTimestamp();
             if (reason) dmEmbed.addFields({ name: 'Reason', value: reason });
-            await ticketCreator.send({ embeds: [dmEmbed] }).catch(err => console.warn(`Could not DM user ${userDiscordId}:`, err.message));
+            await ticketCreator.send({ embeds: [dmEmbed] }).catch(err => console.warn(`Could not DM user ${userDiscordId}:`, err));
         }
     }
     
+    // Delay deletion slightly to ensure messages are seen
+    await new Promise(resolve => setTimeout(resolve, 10000));
     await channel.delete(`Ticket ${ticketId} closed by ${closedBy}`);
 }
 
