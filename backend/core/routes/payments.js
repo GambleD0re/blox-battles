@@ -7,11 +7,32 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getUserDepositAddress } = require('../services/hdWalletService');
 const { getLatestPrice } = require('../services/priceFeedService');
 const { addAddressToMonitor } = require('../services/transactionListenerService');
+const { createTransactionToken } = require('../services/xsollaService');
 
 const router = express.Router();
 
 const USD_TO_GEMS_RATE = parseInt(process.env.USD_TO_GEMS_RATE || '100', 10);
 const MINIMUM_USD_DEPOSIT = parseFloat(process.env.MINIMUM_USD_DEPOSIT || '4');
+
+router.post('/create-xsolla-transaction',
+    authenticateToken,
+    body('amountUSD').isFloat({ gt: MINIMUM_USD_DEPOSIT - 0.01 }).withMessage(`Minimum deposit is $${MINIMUM_USD_DEPOSIT.toFixed(2)}.`),
+    handleValidationErrors,
+    async (req, res) => {
+        try {
+            const { amountUSD } = req.body;
+            const { userId, username } = req.user;
+            
+            const xsollaData = await createTransactionToken(userId, username, amountUSD);
+            
+            res.status(200).json(xsollaData);
+
+        } catch (error) {
+            console.error("Xsolla Transaction Init Error:", error);
+            res.status(500).json({ message: error.message || 'Failed to create Xsolla payment session.' });
+        }
+    }
+);
 
 router.post('/create-checkout-session',
     authenticateToken,
