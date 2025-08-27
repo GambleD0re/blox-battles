@@ -2,7 +2,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const db = require('../../database/database');
-const { authenticateToken, authenticateBot, handleValidationErrors } = require('../../middleware/auth');
+const { authenticateToken, authenticateBot, handleValidationErrors, checkFeatureFlag } = require('../../middleware/auth');
 const { sendInboxRefresh } = require('../services/notificationService');
 
 const router = express.Router();
@@ -90,7 +90,6 @@ router.post('/tickets',
     }
 );
 
-// [NEW] Secure endpoint for the bot to create generic tasks.
 router.post('/tasks',
     authenticateBot,
     [
@@ -113,6 +112,7 @@ router.post('/tasks',
 
 router.post('/initiate-link',
     authenticateBot,
+    checkFeatureFlag('linking_discord'),
     [
         body('username').trim().notEmpty().withMessage('Blox Battles username is required.'),
         body('discordId').isString().notEmpty().withMessage('Discord ID is required.'),
