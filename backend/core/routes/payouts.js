@@ -2,7 +2,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const db = require('../../database/database');
-const { authenticateToken, handleValidationErrors } = require('../../middleware/auth');
+const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../middleware/auth');
 const crypto = require('crypto');
 const { sendCryptoPayout } = require('../services/cryptoPayoutService');
 
@@ -13,6 +13,7 @@ const MINIMUM_GEM_WITHDRAWAL = parseInt(process.env.MINIMUM_GEM_WITHDRAWAL || '1
 
 router.post('/request-crypto',
     authenticateToken,
+    checkFeatureFlag('withdrawals_crypto'),
     [
         body('gemAmount').isInt({ gt: MINIMUM_GEM_WITHDRAWAL - 1 }).withMessage(`Minimum withdrawal is ${MINIMUM_GEM_WITHDRAWAL} gems.`),
         body('recipientAddress').isEthereumAddress().withMessage('A valid recipient wallet address is required.'),
