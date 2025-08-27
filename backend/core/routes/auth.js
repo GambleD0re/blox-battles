@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const { body } = require('express-validator');
-const { handleValidationErrors, validatePassword } = require('../../middleware/auth');
+const { handleValidationErrors, validatePassword, checkFeatureFlag } = require('../../middleware/auth');
 const db = require('../../database/database');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
@@ -13,6 +13,7 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/e
 const jwtSecret = process.env.JWT_SECRET;
 
 router.post('/register',
+    checkFeatureFlag('user_registration'),
     [
         body('username').trim().isLength({ min: 3, max: 20 }).withMessage('Username must be between 3 and 20 characters.').matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores.'),
         body('email').isEmail().withMessage('Please enter a valid email.').normalizeEmail(),
