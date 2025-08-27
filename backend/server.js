@@ -68,7 +68,39 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
 
 app.post('/api/payments/xsolla-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     console.log('[Xsolla Webhook] Received a request.');
-    res.status(200).json({ received: true });
+    try {
+        const event = JSON.parse(req.body);
+
+        if (event.type === 'payment_successful' && event.provider === 'paynearme') {
+            const { transactionId } = event.payload;
+            console.log(`[Xsolla Webhook] Processing successful payment for PayNearMe transaction: ${transactionId}`);
+            const client = await db.getPool().connect();
+            try {
+                await client.query('BEGIN');
+                const { rows: [deposit] } = await client.query("SELECT * FROM deposits WHERE provider_transaction_id = $1 AND provider = 'paynearme' AND status = 'pending' FOR UPDATE", [transactionId]);
+                if (!deposit) {
+                    await client.query('ROLLBACK');
+                    console.warn(`[Xsolla Webhook] Received webhook for unknown or already processed transaction: ${transactionId}`);
+                    return res.status(200).json({ message: 'Transaction already processed or not found.' });
+                }
+                await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [deposit.gem_amount, deposit.user_id]);
+                await client.query("UPDATE deposits SET status = 'completed' WHERE id = $1", [deposit.id]);
+                await client.query(`INSERT INTO transaction_history (user_id, type, amount_gems, description, reference_id) VALUES ($1, 'deposit_paysafecard', $2, 'Deposit via PayNearMe', $3)`, [deposit.user_id, deposit.gem_amount, transactionId]);
+                await client.query('COMMIT');
+                console.log(`[Xsolla Webhook] Successfully credited ${deposit.gem_amount} gems to user ${deposit.user_id}`);
+            } catch (dbError) {
+                await client.query('ROLLBACK');
+                console.error(`[Xsolla Webhook] Database processing failed for transaction ${transactionId}:`, dbError);
+                return res.status(500).json({ error: 'Database processing failed.' });
+            } finally {
+                client.release();
+            }
+        }
+        res.status(200).json({ received: true });
+    } catch (err) {
+        console.error('[Xsolla Webhook] Error parsing webhook:', err);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 });
 
 app.use(express.json());
