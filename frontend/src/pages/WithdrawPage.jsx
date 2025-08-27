@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
+import DisabledOverlay from '../components/DisabledOverlay';
 
 const Loader = ({ inline = false }) => (
     <div className={`flex items-center justify-center ${inline ? '' : 'p-8'}`}><div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
@@ -23,7 +24,7 @@ const CryptoTokenIcon = ({ mainSrc, networkSrc, alt }) => (
 );
 
 const WithdrawPage = () => {
-    const { user, token, refreshUser, appConfig } = useAuth();
+    const { user, token, refreshUser, appConfig, systemStatus } = useAuth();
     const navigate = useNavigate();
 
     const GEM_TO_USD_CONVERSION_RATE = appConfig?.gemToUsdConversionRate || 110;
@@ -34,6 +35,8 @@ const WithdrawPage = () => {
     const [cryptoGemAmount, setCryptoGemAmount] = useState('');
     const [recipientAddress, setRecipientAddress] = useState('');
     const [selectedToken, setSelectedToken] = useState('USDC');
+
+    const cryptoWithdrawalStatus = systemStatus?.withdrawals_crypto;
 
     const supportedWithdrawalTokens = [
         { symbol: 'USDC', name: 'USDCoin', network: 'Polygon Mainnet', mainSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x3c499c542cef5e3811e1192ce70d8cc03d5c3359.png', networkSrc: 'https://static.cx.metamask.io/api/v1/tokenIcons/137/0x0000000000000000000000000000000000000000.png' },
@@ -75,7 +78,8 @@ const WithdrawPage = () => {
                 <div className="widget text-center"><p className="text-sm text-gray-400">Withdrawable Value</p><p className="text-3xl font-bold text-green-400">${((user?.gems || 0) / GEM_TO_USD_CONVERSION_RATE).toFixed(2)}</p></div>
             </div>
 
-            <div>
+            <div className="relative">
+                {!cryptoWithdrawalStatus?.isEnabled && <DisabledOverlay message={cryptoWithdrawalStatus?.message} />}
                 <InfoCard title="Request Crypto Withdrawal">
                     <p>Withdraw your gems as USDC or USDT on the Polygon network. Your request will be reviewed by an admin before being processed.</p>
                     <p className="font-bold text-yellow-400">Warning: Transactions on the blockchain are irreversible. Double-check your address before submitting.</p>
@@ -96,9 +100,9 @@ const WithdrawPage = () => {
                             ))}
                         </div>
                     </div>
-                     <div className="form-group"><label htmlFor="recipient-address">Your Polygon Wallet Address</label><input id="recipient-address" type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="0x..." required className="form-input font-mono"/></div>
-                    <div className="form-group"><label htmlFor="gem-amount-crypto">Gems to Withdraw</label><div className="flex items-center gap-4"><input id="gem-amount-crypto" type="number" value={cryptoGemAmount} onChange={(e) => setCryptoGemAmount(e.target.value)} placeholder={`${MINIMUM_GEM_WITHDRAWAL}`} min={MINIMUM_GEM_WITHDRAWAL} max={user.gems} required className="form-input flex-grow"/><div className="text-lg font-semibold text-gray-400">=</div><div className="text-2xl font-bold text-green-400">${usdValue}</div></div><p className="text-xs text-gray-500 mt-1">Minimum withdrawal: {MINIMUM_GEM_WITHDRAWAL.toLocaleString()} gems.</p></div>
-                    <div className="text-right"><button type="submit" className="btn btn-primary" disabled={!isAmountValid || !isAddressValid || isSubmitting}>{isSubmitting ? <Loader inline={true} /> : `Request Withdrawal`}</button></div>
+                     <div className="form-group"><label htmlFor="recipient-address">Your Polygon Wallet Address</label><input id="recipient-address" type="text" value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="0x..." required className="form-input font-mono" disabled={!cryptoWithdrawalStatus?.isEnabled}/></div>
+                    <div className="form-group"><label htmlFor="gem-amount-crypto">Gems to Withdraw</label><div className="flex items-center gap-4"><input id="gem-amount-crypto" type="number" value={cryptoGemAmount} onChange={(e) => setCryptoGemAmount(e.target.value)} placeholder={`${MINIMUM_GEM_WITHDRAWAL}`} min={MINIMUM_GEM_WITHDRAWAL} max={user.gems} required className="form-input flex-grow" disabled={!cryptoWithdrawalStatus?.isEnabled}/><div className="text-lg font-semibold text-gray-400">=</div><div className="text-2xl font-bold text-green-400">${usdValue}</div></div><p className="text-xs text-gray-500 mt-1">Minimum withdrawal: {MINIMUM_GEM_WITHDRAWAL.toLocaleString()} gems.</p></div>
+                    <div className="text-right"><button type="submit" className="btn btn-primary" disabled={!isAmountValid || !isAddressValid || isSubmitting || !cryptoWithdrawalStatus?.isEnabled}>{isSubmitting ? <Loader inline={true} /> : `Request Withdrawal`}</button></div>
                 </form>
             </div>
         </div>
