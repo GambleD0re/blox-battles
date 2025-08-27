@@ -46,8 +46,8 @@ router.post('/register',
             const verificationToken = crypto.randomBytes(32).toString('hex');
             
             await client.query(
-                'INSERT INTO users (id, username, email, password_hash, is_admin, email_verification_token, is_email_verified) VALUES ($1, $2, $3, $4, $5, $6, $7)', 
-                [newUserId, username, email, hashedPassword, false, verificationToken, false]
+                'INSERT INTO users (id, username, email, password_hash, is_admin, email_verification_token, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
+                [newUserId, username, email, hashedPassword, false, verificationToken, false, true]
             );
 
             await sendVerificationEmail(email, verificationToken);
@@ -143,7 +143,7 @@ router.post('/login',
                 username: user.username,
                 isAdmin: user.is_admin,
                 isMasterAdmin: user.is_master_admin,
-                is_username_set: user.is_username_set // [FIXED] Add this flag to the JWT payload
+                is_username_set: user.is_username_set
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
 
@@ -222,7 +222,7 @@ router.get('/google/callback',
                 username: user.username,
                 isAdmin: user.is_admin,
                 isMasterAdmin: user.is_master_admin,
-                is_username_set: user.is_username_set // [FIXED] Add this flag to the JWT payload
+                is_username_set: user.is_username_set
             };
             const token = jwt.sign(payload, jwtSecret, { expiresIn: '1d' });
 
