@@ -1,7 +1,6 @@
 // discord-bot/core/tasks/serverStatusTasks.js
 const { EmbedBuilder } = require('discord.js');
 
-// Mapping from region ID in the database to the ENV variable names for Discord IDs
 const regionConfig = {
     'NA-East': {
         roleId: process.env.RIVALS_NA_EAST_ROLE_ID,
@@ -44,22 +43,28 @@ async function handleServerStatusUpdate(client, task) {
         }
 
         const isOnline = status === 'online';
+        
+        const nameParts = voiceChannel.name.split('|').map(p => p.trim());
+        const baseName = nameParts.length > 1 ? nameParts[1] : config.fullName;
+        const newStatusEmoji = isOnline ? '🟢' : '🔴';
+        const newChannelName = `${newStatusEmoji} | ${baseName}`;
+
+        if (voiceChannel.name !== newChannelName) {
+            await voiceChannel.setName(newChannelName, `Server status changed to ${status}`);
+        }
+
         const embed = new EmbedBuilder()
             .setTitle(`Rivals Server Status Update`)
             .setTimestamp();
 
         if (isOnline) {
             embed
-                .setColor(0x3BA55D) // Green
+                .setColor(0x3BA55D)
                 .setDescription(`🟢 The **${config.fullName}** region is now **online**!`);
-            // [FIXED] Removed "(Online)" from the channel name
-            await voiceChannel.setName(`🟢 | ${config.fullName}`);
         } else {
             embed
-                .setColor(0xED4245) // Red
+                .setColor(0xED4245)
                 .setDescription(`🔴 The **${config.fullName}** region has gone **offline**.`);
-            // [FIXED] Removed "(Offline)" from the channel name
-            await voiceChannel.setName(`🔴 | ${config.fullName}`);
         }
 
         await pingChannel.send({ content: `<@&${config.roleId}>`, embeds: [embed] });
