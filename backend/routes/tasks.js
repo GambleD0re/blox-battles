@@ -60,7 +60,8 @@ router.get('/bot/discord', authenticateBot, async (req, res) => {
                   'SEND_DISCORD_LINK_SUCCESS_DM',
                   'SEND_DUEL_CHALLENGE_DM',
                   'SEND_DUEL_ACCEPTED_DM',
-                  'SEND_DUEL_STARTED_DM'
+                  'SEND_DUEL_STARTED_DM',
+                  'ANNOUNCE_SERVER_STATUS'
               )
             FOR UPDATE SKIP LOCKED
             LIMIT 5
