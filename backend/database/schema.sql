@@ -278,7 +278,7 @@ CREATE TABLE reaction_roles (
 INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 ('site_wide_maintenance', TRUE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
-('deposits_stripe', TRUE, 'Credit card deposits are temporarily disabled.'),
+('deposits_xsolla', FALSE, 'Alternative payment methods are temporarily unavailable.'),
 ('deposits_crypto', TRUE, 'Cryptocurrency deposits are temporarily disabled.'),
 ('withdrawals_crypto', TRUE, 'Cryptocurrency withdrawals are temporarily disabled.'),
 ('linking_rivals', TRUE, 'Linking new Roblox accounts is temporarily disabled.'),
