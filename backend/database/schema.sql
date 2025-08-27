@@ -1,6 +1,6 @@
 -- backend/database/schema.sql
 -- Drop tables if they exist to ensure a clean slate. The CASCADE keyword will also drop dependent objects.
-DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, gem_purchases, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries CASCADE;
+DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, deposits, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries CASCADE;
 
 -- Table to manage the on/off status of site features.
 CREATE TABLE system_status (
@@ -82,10 +82,11 @@ CREATE TABLE crypto_deposits (
     UNIQUE(tx_hash, network)
 );
 
-CREATE TABLE gem_purchases (
+CREATE TABLE deposits (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-    stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
+    provider VARCHAR(50) NOT NULL,
+    provider_transaction_id VARCHAR(255) UNIQUE,
     gem_amount BIGINT NOT NULL,
     amount_paid INTEGER NOT NULL, -- In cents
     currency VARCHAR(10) NOT NULL,
@@ -97,7 +98,7 @@ CREATE TABLE transaction_history (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     game_id VARCHAR(50) REFERENCES games(id) ON DELETE SET NULL,
-    type VARCHAR(50) NOT NULL CHECK(type IN ('deposit_stripe', 'deposit_crypto', 'withdrawal', 'duel_wager', 'duel_win', 'admin_adjustment', 'tournament_buy_in', 'tournament_prize', 'server_crash_refund')),
+    type VARCHAR(50) NOT NULL CHECK(type IN ('deposit_stripe', 'deposit_crypto', 'withdrawal', 'duel_wager', 'duel_win', 'admin_adjustment', 'tournament_buy_in', 'tournament_prize', 'server_crash_refund', 'deposit_xsolla')),
     amount_gems BIGINT NOT NULL,
     description TEXT,
     reference_id TEXT,
