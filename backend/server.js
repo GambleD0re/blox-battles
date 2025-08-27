@@ -18,7 +18,7 @@ const { startMatchmakingService } = require('./core/services/matchmakingService'
 const { initializePriceFeed } = require('./core/services/priceFeedService');
 const { startTransactionListener } = require('./core/services/transactionListenerService');
 const { startConfirmationService } = require('./core/services/transactionConfirmationService');
-const { startServerStatusMonitor } = require('./core/services/serverStatusMonitor'); // [NEW] Import the new service
+const { startServerStatusMonitor } = require('./core/services/serverStatusMonitor');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,13 +48,13 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
         const client = await db.getPool().connect();
         try {
             await client.query('BEGIN');
-            const { rowCount } = await client.query('SELECT id FROM gem_purchases WHERE stripe_session_id = $1', [sessionId]);
+            const { rowCount } = await client.query("SELECT id FROM deposits WHERE provider = 'stripe' AND provider_transaction_id = $1", [sessionId]);
             if (rowCount > 0) {
                 await client.query('ROLLBACK');
                 return res.status(200).json({ received: true, message: 'Duplicate event.' });
             }
             await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [parseInt(gemAmount, 10), userId]);
-            await client.query('INSERT INTO gem_purchases (user_id, stripe_session_id, gem_amount, amount_paid, currency, status) VALUES ($1, $2, $3, $4, $5, $6)', [userId, sessionId, parseInt(gemAmount, 10), session.amount_total, session.currency, 'completed']);
+            await client.query('INSERT INTO deposits (user_id, provider, provider_transaction_id, gem_amount, amount_paid, currency, status) VALUES ($1, $2, $3, $4, $5, $6, $7)', [userId, 'stripe', sessionId, parseInt(gemAmount, 10), session.amount_total, session.currency, 'completed']);
             await client.query('COMMIT');
         } catch (dbError) {
             await client.query('ROLLBACK');
@@ -63,6 +63,11 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
             client.release();
         }
     }
+    res.status(200).json({ received: true });
+});
+
+app.post('/api/payments/xsolla-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    console.log('[Xsolla Webhook] Received a request.');
     res.status(200).json({ received: true });
 });
 
@@ -123,5 +128,5 @@ server.listen(PORT, async () => {
     
     startGhostFeed(wss);
     startMatchmakingService();
-    startServerStatusMonitor(); // [NEW] Start the status monitor
+    startServerStatusMonitor();
 });
