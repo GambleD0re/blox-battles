@@ -11,7 +11,6 @@ const db = require('./database/database');
 const crypto = require('crypto');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { botLogger } = require('./middleware/botLogger');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeWebSocket, sendToUser } = require('./webSocketManager');
 const { startGhostFeed } = require('./core/services/ghostFeedService');
 const { startMatchmakingService } = require('./core/services/matchmakingService');
@@ -74,40 +73,6 @@ app.post('/api/payments/xsolla-webhook', express.json({ type: 'application/json'
     }
 
     res.status(200).json({});
-});
-
-app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    let event;
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } catch (err) {
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const { userId, gemAmount } = session.metadata;
-        const sessionId = session.id;
-        const client = await db.getPool().connect();
-        try {
-            await client.query('BEGIN');
-            const { rowCount } = await client.query("SELECT id FROM deposits WHERE provider = 'stripe' AND provider_transaction_id = $1", [sessionId]);
-            if (rowCount > 0) {
-                await client.query('ROLLBACK');
-                return res.status(200).json({ received: true, message: 'Duplicate event.' });
-            }
-            await client.query('UPDATE users SET gems = gems + $1 WHERE id = $2', [parseInt(gemAmount, 10), userId]);
-            await client.query('INSERT INTO deposits (user_id, provider, provider_transaction_id, gem_amount, amount_paid, currency, status) VALUES ($1, $2, $3, $4, $5, $6, $7)', [userId, 'stripe', sessionId, parseInt(gemAmount, 10), session.amount_total, session.currency, 'completed']);
-            await client.query('COMMIT');
-        } catch (dbError) {
-            await client.query('ROLLBACK');
-            return res.status(500).json({ error: 'Database processing failed.' });
-        } finally {
-            client.release();
-        }
-    }
-    res.status(200).json({ received: true });
 });
 
 app.use(express.json());
