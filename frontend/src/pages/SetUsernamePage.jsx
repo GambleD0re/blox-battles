@@ -17,7 +17,7 @@ const SetUsernamePage = () => {
         setIsLoading(true);
         try {
             const data = await api.setUsername(username, token);
-            await login(data.token); // Re-login with the new token that has is_username_set: true
+            await login(data.token);
             navigate('/dashboard');
         } catch (err) {
             setError(err.message);
@@ -27,7 +27,7 @@ const SetUsernamePage = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="flex items-center justify-center min-h-[calc(100vh-15rem)]">
             <div className="w-full max-w-md p-8 space-y-8 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center">
                 <h1 className="text-3xl font-bold text-white">Welcome to Blox Battles!</h1>
                 <p className="text-gray-400">
