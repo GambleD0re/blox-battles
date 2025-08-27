@@ -2,7 +2,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const db = require('../../../database/database');
-const { authenticateToken, handleValidationErrors } = require('../../../middleware/auth');
+const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../../middleware/auth');
 const GAME_DATA = require('../data/rivalsGameData');
 
 const router = express.Router();
@@ -19,7 +19,9 @@ router.get('/status', authenticateToken, async (req, res) => {
     }
 });
 
-router.post('/join', authenticateToken,
+router.post('/join',
+    authenticateToken,
+    checkFeatureFlag('dueling_rivals_queue'),
     [
         body('wager').isInt({ gt: 0 }),
         body('preferences.region').isIn(GAME_DATA.regions.map(r => r.id)),
