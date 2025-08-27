@@ -1,8 +1,9 @@
 // frontend/src/components/games/rivals/ChallengePlayer.jsx
 import React, { useState } from 'react';
 import * as api from '../../../services/api';
+import DisabledOverlay from '../../DisabledOverlay';
 
-const ChallengePlayer = ({ token, onChallenge, onError, isBanned }) => {
+const ChallengePlayer = ({ token, onChallenge, isDisabled, disabledMessage }) => {
     const [username, setUsername] = useState('');
     const [searchResult, setSearchResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -27,14 +28,15 @@ const ChallengePlayer = ({ token, onChallenge, onError, isBanned }) => {
     };
 
     return (
-        <div className="widget">
+        <div className="widget relative">
+            {isDisabled && <DisabledOverlay message={disabledMessage} />}
             <h2 className="widget-title">Challenge a Player</h2>
             <form onSubmit={handleFindPlayer}>
                 <div className="form-group mb-4">
                     <label htmlFor="player-search-input" className="block text-sm font-medium text-gray-400 mb-1">Opponent's Roblox Username</label>
                     <div className="flex items-center gap-2">
-                        <input id="player-search-input" type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username..." required className="form-input flex-grow" disabled={isBanned} />
-                        <button type="submit" className="btn btn-primary !mt-0 w-1/4" disabled={isLoading || isBanned}>
+                        <input id="player-search-input" type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username..." required className="form-input flex-grow" disabled={isDisabled || isLoading} />
+                        <button type="submit" className="btn btn-primary !mt-0 w-1/4" disabled={isDisabled || isLoading}>
                             {isLoading ? '...' : 'Find'}
                         </button>
                     </div>
@@ -45,4 +47,28 @@ const ChallengePlayer = ({ token, onChallenge, onError, isBanned }) => {
     );
 };
 
-export default ChallengePlayer;
+export default ChallengePlayer;```
+
+### 4. The `QuickMatchWidget.jsx`
+
+Similarly, this component is updated to accept the `isDisabled` prop, which disables its button and renders the new overlay.
+
+```javascript
+// frontend/src/components/games/rivals/QuickMatchWidget.jsx
+import React from 'react';
+import DisabledOverlay from '../../DisabledOverlay';
+
+const QuickMatchWidget = ({ onJoinClick, isDisabled, disabledMessage }) => {
+    return (
+        <div className="widget relative">
+            {isDisabled && <DisabledOverlay message={disabledMessage} />}
+            <h2 className="widget-title">Quick Match</h2>
+            <p className="text-gray-400 mb-4">Enter a queue to be automatically matched against another player with a similar wager.</p>
+            <button onClick={onJoinClick} className="btn btn-primary w-full" disabled={isDisabled}>
+                Join Random Queue
+            </button>
+        </div>
+    );
+};
+
+export default QuickMatchWidget;
