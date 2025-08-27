@@ -3,7 +3,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const fetch = require('node-fetch');
 const db = require('../../../database/database');
-const { authenticateToken, handleValidationErrors } = require('../../../middleware/auth');
+const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../../middleware/auth');
 
 const router = express.Router();
 const RIVALS_GAME_ID = 'rivals';
@@ -46,7 +46,9 @@ router.put('/challenge-preference', authenticateToken,
     }
 );
 
-router.post('/link', authenticateToken,
+router.post('/link',
+    authenticateToken,
+    checkFeatureFlag('linking_rivals'),
     body('robloxUsername').trim().escape().notEmpty().withMessage('Roblox username is required.'),
     handleValidationErrors,
     async (req, res) => {
