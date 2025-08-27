@@ -1,7 +1,7 @@
 // backend/core/routes/payments.js
 const express = require('express');
 const { body } = require('express-validator');
-const { authenticateToken, handleValidationErrors } = require('../../middleware/auth');
+const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../middleware/auth');
 const db = require('../../database/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getUserDepositAddress } = require('../services/hdWalletService');
@@ -16,6 +16,7 @@ const MINIMUM_USD_DEPOSIT = parseFloat(process.env.MINIMUM_USD_DEPOSIT || '4');
 
 router.post('/create-xsolla-transaction',
     authenticateToken,
+    checkFeatureFlag('deposits_xsolla'),
     body('amountUSD').isFloat({ gt: MINIMUM_USD_DEPOSIT - 0.01 }).withMessage(`Minimum deposit is $${MINIMUM_USD_DEPOSIT.toFixed(2)}.`),
     handleValidationErrors,
     async (req, res) => {
