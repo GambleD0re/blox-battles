@@ -25,7 +25,7 @@ const regionConfig = {
 };
 
 async function handleServerStatusUpdate(client, task) {
-    const { region, status } = task.payload;
+    const { region, status, silent } = task.payload;
     const config = regionConfig[region];
     const pingChannelId = process.env.STATUS_PINGS_CHANNEL_ID;
 
@@ -51,6 +51,11 @@ async function handleServerStatusUpdate(client, task) {
 
         if (voiceChannel.name !== newChannelName) {
             await voiceChannel.setName(newChannelName, `Server status changed to ${status}`);
+        }
+
+        if (silent) {
+            console.log(`[StatusUpdate] Silently synced status for ${region} to ${status}.`);
+            return;
         }
 
         const embed = new EmbedBuilder()
