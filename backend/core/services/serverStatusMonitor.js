@@ -6,6 +6,7 @@ const CHECK_INTERVAL_MS = 30 * 1000;
 const RIVALS_GAME_ID = 'rivals';
 
 const regionStatus = new Map();
+let isInitialRun = true;
 
 async function checkServerStatuses() {
     try {
@@ -20,14 +21,21 @@ async function checkServerStatuses() {
             const previousStatus = regionStatus.get(regionId) || 'offline';
             const currentStatus = activeRegions.has(regionId) ? 'online' : 'offline';
 
-            if (previousStatus !== currentStatus) {
-                console.log(`[StatusMonitor] Region ${regionId} changed status from ${previousStatus} to ${currentStatus}. Creating task.`);
+            if (isInitialRun || previousStatus !== currentStatus) {
+                const logMessage = isInitialRun
+                    ? `[StatusMonitor] Initial state for ${regionId} is ${currentStatus}. Creating sync task.`
+                    : `[StatusMonitor] Region ${regionId} changed status from ${previousStatus} to ${currentStatus}. Creating task.`;
+                console.log(logMessage);
 
                 const taskPayload = {
                     gameId: RIVALS_GAME_ID,
                     region: regionId,
-                    status: currentStatus
+                    status: currentStatus,
                 };
+
+                if (isInitialRun) {
+                    taskPayload.silent = true;
+                }
 
                 await db.query(
                     "INSERT INTO tasks (task_type, payload) VALUES ('ANNOUNCE_SERVER_STATUS', $1)",
@@ -37,6 +45,7 @@ async function checkServerStatuses() {
                 regionStatus.set(regionId, currentStatus);
             }
         }
+        isInitialRun = false;
     } catch (error) {
         console.error('[StatusMonitor] Error checking server statuses:', error);
     }
