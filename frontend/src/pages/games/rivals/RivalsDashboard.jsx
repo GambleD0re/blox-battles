@@ -9,13 +9,12 @@ import Inbox from '../../../components/games/rivals/Inbox';
 import QuickMatchWidget from '../../../components/games/rivals/QuickMatchWidget';
 import QueueStatusWidget from '../../../components/games/rivals/QueueStatusWidget';
 import SidebarMenu from '../../../components/Dashboard/SidebarMenu';
-import { ChallengeModal, DuelDetailsModal, ConfirmationModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
+import { ChallengeModal, DuelDetailsModal, PostDuelModal, Modal, MatchReadyModal } from '../../../components/Dashboard/Modals';
 import LiveFeed from '../../../components/Dashboard/LiveFeed';
 import QueueConfigForm from '../../../components/games/rivals/QueueConfigForm';
-import FeatureGuard from '../../../components/FeatureGuard';
 
 const RivalsDashboard = () => {
-    const { user, token, gameProfiles, fullRefresh } = useAuth();
+    const { user, token, gameProfiles, fullRefresh, systemStatus } = useAuth();
     const rivalsProfile = gameProfiles?.rivals;
 
     const [inbox, setInbox] = useState([]);
@@ -33,6 +32,9 @@ const RivalsDashboard = () => {
     
     const [selectedOpponent, setSelectedOpponent] = useState(null);
     const [selectedDuel, setSelectedDuel] = useState(null);
+
+    const directDuelingStatus = systemStatus?.dueling_rivals_direct;
+    const queueDuelingStatus = systemStatus?.dueling_rivals_queue;
 
     const showMessage = (text, type = 'success') => {
         setMessage({ text, type });
@@ -192,16 +194,21 @@ const RivalsDashboard = () => {
 
             <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                 <div className="space-y-6">
-                    <FeatureGuard featureName="dueling_rivals_direct">
-                        <ChallengePlayer token={token} onChallenge={handleChallengePlayer} />
-                    </FeatureGuard>
-                    <FeatureGuard featureName="dueling_rivals_queue">
-                        {queueStatus ? (
-                            <QueueStatusWidget queueStatus={queueStatus} token={token} showMessage={showMessage} onQueueLeft={handleQueueLeft} />
-                        ) : (
-                            <QuickMatchWidget onJoinClick={() => setQueueModalOpen(true)} />
-                        )}
-                    </FeatureGuard>
+                    <ChallengePlayer 
+                        token={token} 
+                        onChallenge={handleChallengePlayer} 
+                        isDisabled={!directDuelingStatus?.isEnabled}
+                        disabledMessage={directDuelingStatus?.message}
+                    />
+                    {queueStatus ? (
+                        <QueueStatusWidget queueStatus={queueStatus} token={token} showMessage={showMessage} onQueueLeft={handleQueueLeft} />
+                    ) : (
+                        <QuickMatchWidget 
+                            onJoinClick={() => setQueueModalOpen(true)} 
+                            isDisabled={!queueDuelingStatus?.isEnabled}
+                            disabledMessage={queueDuelingStatus?.message}
+                        />
+                    )}
                 </div>
                 <div className="flex">
                     <Inbox 
