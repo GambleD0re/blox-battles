@@ -7,6 +7,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getUserDepositAddress } = require('../services/hdWalletService');
 const { getLatestPrice } = require('../services/priceFeedService');
 const { addAddressToMonitor } = require('../services/transactionListenerService');
+const xsollaService = require('../services/xsollaService');
 
 const router = express.Router();
 
@@ -48,6 +49,59 @@ router.post('/create-checkout-session',
         } catch (error) {
             console.error("Stripe Session Error:", error);
             res.status(500).json({ message: 'Failed to create payment session.' });
+        }
+    }
+);
+
+router.post('/voucher-deposit',
+    authenticateToken,
+    [
+        body('pin').isString().matches(/^(?:\d{4}[\s-]?){3}\d{4}$/).withMessage('A valid 16-digit PIN is required.'),
+        body('amount').isFloat({ gt: MINIMUM_USD_DEPOSIT - 0.01 }).withMessage(`Minimum deposit is $${MINIMUM_USD_DEPOSIT.toFixed(2)}.`)
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { pin, amount } = req.body;
+        const userId = req.user.userId;
+        const client = await db.getPool().connect();
+
+        try {
+            const result = await xsollaService.processVoucherPayment(pin, userId, amount);
+            
+            const gemAmount = Math.floor(amount * USD_TO_GEMS_RATE);
+            const amountInCents = Math.round(amount * 100);
+
+            await client.query('BEGIN');
+            
+            const { rows: [updatedUser] } = await client.query(
+                'UPDATE users SET gems = gems + $1 WHERE id = $2 RETURNING gems', 
+                [gemAmount, userId]
+            );
+
+            await client.query(
+                `INSERT INTO deposits (user_id, provider, provider_transaction_id, gem_amount, amount_paid, currency, status)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'completed')`,
+                 [userId, result.provider, result.transactionId, gemAmount, amountInCents, result.currency]
+            );
+
+            await client.query(
+                `INSERT INTO transaction_history (user_id, type, amount_gems, description, reference_id)
+                 VALUES ($1, 'deposit_paysafecard', $2, $3, $4)`,
+                 [userId, gemAmount, `Deposit via paysafecard`, result.transactionId]
+            );
+
+            await client.query('COMMIT');
+
+            res.status(200).json({ 
+                message: 'Deposit successful! Your gems have been credited.', 
+                newBalance: updatedUser.gems 
+            });
+        } catch (error) {
+            await client.query('ROLLBACK').catch(console.error);
+            console.error("Voucher Deposit Error:", error);
+            res.status(400).json({ message: error.message || 'Failed to process voucher deposit.' });
+        } finally {
+            client.release();
         }
     }
 );
