@@ -102,7 +102,7 @@ const App = () => {
                         <Route path="/set-username" element={<SetUsernamePage />} />
                         <Route path="/dashboard" element={<MainDashboard />} />
                         <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/deposit" element={<FeatureGuard featureName="deposits_stripe"><DepositPage /></FeatureGuard>} />
+                        <Route path="/deposit" element={<FeatureGuard featureName="deposits_xsolla"><DepositPage /></FeatureGuard>} />
                         <Route path="/withdraw" element={<FeatureGuard featureName="withdrawals_crypto"><WithdrawPage /></FeatureGuard>} />
                         <Route path="/history" element={<TransactionHistoryPage />} />
                         <Route path="/duel-history" element={<DuelHistoryPage />} />
