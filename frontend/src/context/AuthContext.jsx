@@ -80,13 +80,13 @@ export const AuthProvider = ({ children }) => {
             const urlParams = new URLSearchParams(window.location.search);
             const urlToken = urlParams.get('token');
 
-            if (urlToken) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                await login(urlToken);
-            } else {
-                const existingToken = localStorage.getItem('token');
-                if (existingToken) {
-                    try {
+            try {
+                if (urlToken) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    await login(urlToken);
+                } else {
+                    const existingToken = localStorage.getItem('token');
+                    if (existingToken) {
                         const decoded = jwtDecode(existingToken);
                         if (decoded.exp * 1000 < Date.now()) {
                             logout();
@@ -94,17 +94,19 @@ export const AuthProvider = ({ children }) => {
                             setToken(existingToken);
                             await fetchAndSetAllData(existingToken);
                         }
-                    } catch (e) {
-                        logout();
                     }
                 }
+            } catch (e) {
+                console.error("Initialization error:", e);
+                logout();
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
         initializeAuth();
-    }, [login, logout, fetchAndSetAllData]);
+    }, []);
 
     const value = { user, gameProfiles, token, systemStatus, appConfig, login, logout, isLoading, fullRefresh };
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={value}>{children}</Auth.Provider>;
 };
