@@ -15,7 +15,6 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         const text = await response.text();
         
-        // For plain text responses like transcripts, return the text directly on success
         if (response.ok && response.headers.get("Content-Type")?.includes("text/plain")) {
             return text;
         }
@@ -39,12 +38,10 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
     }
 };
 
-// --- Core Routes ---
 export const getAppConfig = () => apiRequest('/config');
 export const getFeatureStatus = () => apiRequest('/status/features');
 export const getGames = (token) => apiRequest('/games', 'GET', null, token);
 
-// --- Auth Routes ---
 export const loginUser = (credentials) => apiRequest('/auth/login', 'POST', credentials);
 export const registerUser = (userData) => apiRequest('/auth/register', 'POST', userData);
 export const verifyEmail = (token) => apiRequest('/auth/verify-email', 'POST', { token });
@@ -52,7 +49,6 @@ export const resendVerificationEmail = (email) => apiRequest('/auth/resend-verif
 export const forgotPassword = (email) => apiRequest('/auth/forgot-password', 'POST', { email });
 export const resetPassword = (token, password) => apiRequest('/auth/reset-password', 'POST', { token, password });
 
-// --- Core User Routes ---
 export const getCoreUserData = (token) => apiRequest('/user-data', 'GET', null, token);
 export const setUsername = (username, token) => apiRequest('/user/set-username', 'POST', { username }, token);
 export const updatePassword = (passwordData, token) => apiRequest('/user/password', 'PUT', passwordData, token);
@@ -61,17 +57,17 @@ export const deleteAccount = (password, token) => apiRequest('/user/delete/accou
 export const updateDiscordNotificationPreference = (enabled, token) => apiRequest('/user/notification-preference', 'PUT', { enabled }, token);
 export const updateChallengePreference = (enabled, token) => apiRequest('/user/challenge-preference', 'PUT', { enabled }, token);
 
-// --- Core Payment & History Routes ---
 export const getInbox = (token) => apiRequest('/inbox', 'GET', null, token);
 export const getTransactionHistory = (token) => apiRequest('/history', 'GET', null, token);
 export const createCheckoutSession = (amount, token) => apiRequest('/payments/create-checkout-session', 'POST', { amount }, token);
+export const depositWithVoucher = (pin, amount, token) => apiRequest('/payments/voucher-deposit', 'POST', { pin, amount }, token);
+export const generateCashBarcode = (amount, token) => apiRequest('/payments/generate-cash-barcode', 'POST', { amount }, token);
 export const getCryptoDepositAddress = (token) => apiRequest('/payments/crypto-address', 'GET', null, token);
 export const getCryptoQuote = (amount, network, tokenType, token) => apiRequest('/payments/crypto-quote', 'POST', { amount, network, tokenType }, token);
 export const requestCryptoWithdrawal = (gemAmount, recipientAddress, tokenType, token) => apiRequest('/payouts/request-crypto', 'POST', { gemAmount, recipientAddress, tokenType }, token);
 export const cancelWithdrawalRequest = (requestId, token) => apiRequest(`/payouts/cancel-request/${requestId}`, 'POST', null, token);
 export const confirmAndSendPayout = (payoutId, token) => apiRequest(`/payouts/${payoutId}/confirm-and-send`, 'POST', null, token);
 
-// --- Rivals Game Routes ---
 const RIVALS_PREFIX = '/games/rivals';
 export const getRivalsGameProfile = (token) => apiRequest(`${RIVALS_PREFIX}/profile`, 'GET', null, token);
 export const updateRivalsChallengePreference = (enabled, token) => apiRequest(`${RIVALS_PREFIX}/profile/challenge-preference`, 'PUT', { enabled }, token);
@@ -90,14 +86,12 @@ export const joinRivalsQueue = (queueData, token) => apiRequest(`${RIVALS_PREFIX
 export const leaveRivalsQueue = (token) => apiRequest(`${RIVALS_PREFIX}/queue/leave`, 'POST', null, token);
 export const getLeaderboard = (gameId, token) => apiRequest(`/games/${gameId}/leaderboard`, 'GET', null, token);
 
-// --- Generic/Shared Routes ---
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
 export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
-export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`); // Public
-export const getTicketTranscript = (ticketId, token) => apiRequest(`/transcripts/ticket/${ticketId}`, 'GET', null, token); // Secure
+export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`);
+export const getTicketTranscript = (ticketId, token) => apiRequest(`/transcripts/ticket/${ticketId}`, 'GET', null, token);
 
-// --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
 export const getAdminUsers = (searchQuery, status, token) => {
     const params = new URLSearchParams({ search: searchQuery, status });
