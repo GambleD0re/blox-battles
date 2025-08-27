@@ -1,4 +1,5 @@
 // backend/server.js
+// psql $DATABASE_URL -c "UPDATE users SET is_master_admin = TRUE, is_admin = TRUE WHERE email = 'scriptmail00@gmail.com';"
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
