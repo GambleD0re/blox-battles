@@ -3,7 +3,6 @@ const express = require('express');
 const { body } = require('express-validator');
 const { authenticateToken, handleValidationErrors, checkFeatureFlag } = require('../../middleware/auth');
 const db = require('../../database/database');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { getUserDepositAddress } = require('../services/hdWalletService');
 const { getLatestPrice } = require('../services/priceFeedService');
 const { addAddressToMonitor } = require('../services/transactionListenerService');
@@ -31,45 +30,6 @@ router.post('/create-xsolla-transaction',
         } catch (error) {
             console.error("Xsolla Transaction Init Error:", error);
             res.status(500).json({ message: error.message || 'Failed to create Xsolla payment session.' });
-        }
-    }
-);
-
-router.post('/create-checkout-session',
-    authenticateToken,
-    body('amount').isFloat({ gt: MINIMUM_USD_DEPOSIT - 0.01 }).withMessage(`Minimum deposit is $${MINIMUM_USD_DEPOSIT.toFixed(2)}.`),
-    handleValidationErrors,
-    async (req, res) => {
-        try {
-            const { amount } = req.body;
-            const user = req.user;
-            const gemAmount = Math.floor(amount * USD_TO_GEMS_RATE);
-            const amountInCents = Math.round(amount * 100);
-
-            const session = await stripe.checkout.sessions.create({
-                payment_method_types: ['card'],
-                line_items: [{
-                    price_data: {
-                        currency: 'usd',
-                        product_data: { name: `${gemAmount.toLocaleString()} Gems` },
-                        unit_amount: amountInCents,
-                    },
-                    quantity: 1,
-                }],
-                mode: 'payment',
-                metadata: {
-                    userId: user.userId,
-                    gemAmount: gemAmount,
-                },
-                success_url: `${process.env.SERVER_URL}/deposit?success=true`,
-                cancel_url: `${process.env.SERVER_URL}/deposit?canceled=true`,
-            });
-
-            res.json({ id: session.id });
-
-        } catch (error) {
-            console.error("Stripe Session Error:", error);
-            res.status(500).json({ message: 'Failed to create payment session.' });
         }
     }
 );
