@@ -15,7 +15,6 @@ const apiRequest = async (endpoint, method = 'GET', body = null, token = null) =
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         const text = await response.text();
         
-        // For plain text responses like transcripts, return the text directly on success
         if (response.ok && response.headers.get("Content-Type")?.includes("text/plain")) {
             return text;
         }
@@ -64,7 +63,7 @@ export const updateChallengePreference = (enabled, token) => apiRequest('/user/c
 // --- Core Payment & History Routes ---
 export const getInbox = (token) => apiRequest('/inbox', 'GET', null, token);
 export const getTransactionHistory = (token) => apiRequest('/history', 'GET', null, token);
-export const createCheckoutSession = (amount, token) => apiRequest('/payments/create-checkout-session', 'POST', { amount }, token);
+export const createXsollaTransaction = (amountUSD, token) => apiRequest('/payments/create-xsolla-transaction', 'POST', { amountUSD }, token);
 export const getCryptoDepositAddress = (token) => apiRequest('/payments/crypto-address', 'GET', null, token);
 export const getCryptoQuote = (amount, network, tokenType, token) => apiRequest('/payments/crypto-quote', 'POST', { amount, network, tokenType }, token);
 export const requestCryptoWithdrawal = (gemAmount, recipientAddress, tokenType, token) => apiRequest('/payouts/request-crypto', 'POST', { gemAmount, recipientAddress, tokenType }, token);
@@ -94,8 +93,8 @@ export const getLeaderboard = (gameId, token) => apiRequest(`/games/${gameId}/le
 export const getDuelHistory = (token) => apiRequest('/duel-history', 'GET', null, token);
 export const createSupportTicket = (ticketData, token) => apiRequest('/tickets', 'POST', ticketData, token);
 export const respondToDiscordLink = (messageId, response, token) => apiRequest('/discord/respond-link', 'POST', { messageId, response }, token);
-export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`); // Public
-export const getTicketTranscript = (ticketId, token) => apiRequest(`/transcripts/ticket/${ticketId}`, 'GET', null, token); // Secure
+export const getTranscript = (duelId) => apiRequest(`/transcripts/${duelId}`);
+export const getTicketTranscript = (ticketId, token) => apiRequest(`/transcripts/ticket/${ticketId}`, 'GET', null, token);
 
 // --- Admin Routes ---
 export const getAdminStats = (token) => apiRequest('/admin/stats', 'GET', null, token);
