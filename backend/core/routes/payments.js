@@ -106,6 +106,48 @@ router.post('/voucher-deposit',
     }
 );
 
+router.post('/generate-cash-barcode',
+    authenticateToken,
+    [
+        body('amount').isFloat({ gt: MINIMUM_USD_DEPOSIT - 0.01 }).withMessage(`Minimum deposit is $${MINIMUM_USD_DEPOSIT.toFixed(2)}.`)
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { amount } = req.body;
+        const userId = req.user.userId;
+        const client = await db.getPool().connect();
+
+        try {
+            const result = await xsollaService.generateCashBarcode(userId, amount);
+            
+            const gemAmount = Math.floor(amount * USD_TO_GEMS_RATE);
+            const amountInCents = Math.round(amount * 100);
+
+            await client.query('BEGIN');
+            
+            await client.query(
+                `INSERT INTO deposits (user_id, provider, provider_transaction_id, gem_amount, amount_paid, currency, status)
+                 VALUES ($1, $2, $3, $4, $5, 'USD', 'pending')`,
+                 [userId, result.provider, result.transactionId, gemAmount, amountInCents]
+            );
+
+            await client.query('COMMIT');
+
+            res.status(200).json({ 
+                message: 'Barcode generated successfully.',
+                barcode: result.barcodeImageUrl,
+                transactionId: result.transactionId
+            });
+        } catch (error) {
+            await client.query('ROLLBACK').catch(console.error);
+            console.error("Cash Barcode Generation Error:", error);
+            res.status(500).json({ message: error.message || 'Failed to generate cash deposit instructions.' });
+        } finally {
+            client.release();
+        }
+    }
+);
+
 router.get('/crypto-address', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     try {
