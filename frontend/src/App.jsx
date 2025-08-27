@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import FeatureGuard from './components/FeatureGuard.jsx';
-import MainLayout from './components/MainLayout.jsx'; // Import the new layout
+import MainLayout from './components/MainLayout.jsx';
 
 // Core Pages
 import SignInPage from './pages/SignInPage.jsx';
@@ -85,7 +85,6 @@ const App = () => {
         <ErrorBoundary>
             <Suspense fallback={<Loader fullScreen />}>
                 <Routes>
-                    {/* Public Routes */}
                     <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/signin" />} />
                     <Route path="/signin" element={!user ? <SignInPage /> : <Navigate to="/dashboard" />} />
                     <Route path="/signup" element={!user ? <SignUpPage /> : <Navigate to="/dashboard" />} />
@@ -99,13 +98,12 @@ const App = () => {
                     <Route path="/transcripts/:duelId" element={<TranscriptViewerPage />} />
                     <Route path="/transcripts/ticket/:ticketId" element={<TicketTranscriptViewerPage />} />
 
-                    {/* Protected Routes with Main Layout */}
                     <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                         <Route path="/set-username" element={<SetUsernamePage />} />
                         <Route path="/dashboard" element={<MainDashboard />} />
                         <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/deposit" element={<FeatureGuard featureName="deposits"><DepositPage /></FeatureGuard>} />
-                        <Route path="/withdraw" element={<FeatureGuard featureName="withdrawals"><WithdrawPage /></FeatureGuard>} />
+                        <Route path="/deposit" element={<FeatureGuard featureName="deposits_stripe"><DepositPage /></FeatureGuard>} />
+                        <Route path="/withdraw" element={<FeatureGuard featureName="withdrawals_crypto"><WithdrawPage /></FeatureGuard>} />
                         <Route path="/history" element={<TransactionHistoryPage />} />
                         <Route path="/duel-history" element={<DuelHistoryPage />} />
                         <Route path="/games/rivals/dashboard" element={<ProtectedRoute requireGameProfile="rivals"><RivalsDashboard /></ProtectedRoute>} />
@@ -114,7 +112,6 @@ const App = () => {
                         <Route path="/admin/games/rivals/tournaments/create" element={<AdminRoute><RivalsTournamentCreatePage /></AdminRoute>} />
                     </Route>
                     
-                    {/* Standalone Protected Routes (No Main Layout) */}
                     <Route path="/games/rivals/link" element={<ProtectedRoute><RivalsLinkPage /></ProtectedRoute>} />
                     
                     <Route path="*" element={<NotFoundPage />} />
