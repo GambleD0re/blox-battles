@@ -108,5 +108,5 @@ export const AuthProvider = ({ children }) => {
 
     const value = { user, gameProfiles, token, systemStatus, appConfig, login, logout, isLoading, fullRefresh };
 
-    return <AuthContext.Provider value={value}>{children}</Auth.Provider>;
+    return <AuthContext.Provider value={value}>{children}</Authcontext.Provider>;
 };
