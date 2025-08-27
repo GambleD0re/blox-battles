@@ -3,7 +3,6 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
-import FeatureGuard from './components/FeatureGuard.jsx';
 import MainLayout from './components/MainLayout.jsx';
 
 // Core Pages
@@ -103,7 +102,7 @@ const App = () => {
                         <Route path="/dashboard" element={<MainDashboard />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/deposit" element={<DepositPage />} />
-                        <Route path="/withdraw" element={<FeatureGuard featureName="withdrawals_crypto"><WithdrawPage /></FeatureGuard>} />
+                        <Route path="/withdraw" element={<WithdrawPage />} />
                         <Route path="/history" element={<TransactionHistoryPage />} />
                         <Route path="/duel-history" element={<DuelHistoryPage />} />
                         <Route path="/games/rivals/dashboard" element={<ProtectedRoute requireGameProfile="rivals"><RivalsDashboard /></ProtectedRoute>} />
