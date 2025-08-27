@@ -23,7 +23,7 @@ async function checkServerStatuses() {
 
             if (isInitialRun || previousStatus !== currentStatus) {
                 const logMessage = isInitialRun
-                    ? `[StatusMonitor] Initial state for ${regionId} is ${currentStatus}. Creating sync task.`
+                    ? `[StatusMonitor] Initial state for ${regionId} is ${currentStatus}. Creating task.`
                     : `[StatusMonitor] Region ${regionId} changed status from ${previousStatus} to ${currentStatus}. Creating task.`;
                 console.log(logMessage);
 
@@ -32,10 +32,6 @@ async function checkServerStatuses() {
                     region: regionId,
                     status: currentStatus,
                 };
-
-                if (isInitialRun) {
-                    taskPayload.silent = true;
-                }
 
                 await db.query(
                     "INSERT INTO tasks (task_type, payload) VALUES ('ANNOUNCE_SERVER_STATUS', $1)",
