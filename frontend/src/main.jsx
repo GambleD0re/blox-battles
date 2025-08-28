@@ -74,7 +74,6 @@ style.innerHTML = `
     .pos-slot1 { left: calc(100% - 40rem - 1rem); }
     .pos-enter { left: 100%; }
     .pos-exit { left: -40rem; }
-    .dashboard-grid { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr)); }
 `;
 document.head.appendChild(style);
 
