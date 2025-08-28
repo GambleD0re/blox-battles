@@ -7,9 +7,16 @@ import UserActionsModal from '../components/Admin/UserActionsModal';
 import { TranscriptModal } from '../components/Dashboard/Modals';
 import { AdminPayoutDetailModal, DeclineModal } from '../components/Admin/AdminPayoutModals';
 
-const StatCard = ({ title, value, icon }) => (
+const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const GemsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="m12 22 4-13-3-6"/><path d="M12 22 8 9l3-6"/></svg>;
+const DisputesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9.09 9 5.82 5.82"/><path d="m14.91 9-5.82 5.82"/></svg>;
+const PayoutsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 12h5a2 2 0 0 1 0 4h-5a2 2 0 0 1 0-4Z"/><path d="M8 7H3a2 2 0 0 0 0 4h5a2 2 0 0 0 0-4Z"/><path d="M12 17V7"/></svg>;
+
+const StatCard = ({ title, value, icon, color }) => (
     <div className="widget flex items-center p-4 gap-4">
-        <div className="text-3xl">{icon}</div>
+        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
+            {icon}
+        </div>
         <div>
             <div className="text-2xl font-bold text-white">{value}</div>
             <div className="text-sm text-gray-400">{title}</div>
@@ -18,10 +25,10 @@ const StatCard = ({ title, value, icon }) => (
 );
 
 const UserRow = ({ user, onSelectUser }) => (
-    <tr className="border-b border-gray-700 hover:bg-gray-800/50">
-        <td className="p-3"><div className="font-semibold text-white">{user.username}</div><div className="text-xs text-gray-400">{user.email}</div></td>
-        <td className="p-3 text-center">{user.gems}</td>
-        <td className="p-3 text-center"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.status === 'active' ? 'bg-green-800 text-green-200' : 'bg-red-800 text-red-200'}`}>{user.status.toUpperCase()}</span></td>
+    <tr className="border-b border-gray-800 hover:bg-gray-800/50">
+        <td className="p-3"><div className="font-semibold text-white">{user.username}</div><div className="text-xs text-gray-500">{user.email}</div></td>
+        <td className="p-3 text-center font-mono">{user.gems.toLocaleString()}</td>
+        <td className="p-3 text-center"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.status === 'active' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{user.status.toUpperCase()}</span></td>
         <td className="p-3 text-right"><button onClick={() => onSelectUser(user)} className="btn btn-secondary !mt-0 !py-1 !px-3">Manage</button></td>
     </tr>
 );
@@ -101,10 +108,10 @@ const AdminDashboard = () => {
             </header>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Total Users" value={stats.totalUsers} icon="👥" />
-                <StatCard title="Gems in Circulation" value={stats.gemsInCirculation?.toLocaleString()} icon="💎" />
-                <StatCard title="Pending Disputes" value={stats.pendingDisputes} icon="⚖️" />
-                <StatCard title="Pending Payouts" value={stats.pendingPayouts} icon="💸" />
+                <StatCard title="Total Users" value={stats.totalUsers || 0} icon={<UsersIcon />} color="bg-blue-500/20 text-blue-300" />
+                <StatCard title="Gems in Circulation" value={stats.gemsInCirculation?.toLocaleString() || 0} icon={<GemsIcon />} color="bg-purple-500/20 text-purple-300" />
+                <StatCard title="Pending Disputes" value={stats.pendingDisputes || 0} icon={<DisputesIcon />} color="bg-yellow-500/20 text-yellow-300" />
+                <StatCard title="Pending Payouts" value={stats.pendingPayouts || 0} icon={<PayoutsIcon />} color="bg-green-500/20 text-green-300" />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-stretch">
@@ -112,16 +119,17 @@ const AdminDashboard = () => {
                     <h2 className="widget-title flex-shrink-0">Pending Disputes</h2>
                     <div className="overflow-x-auto flex-grow">
                         <table className="w-full">
-                            <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">Duel ID</th><th className="p-3">Game</th><th className="p-3">Reporter</th><th className="p-3">Reported</th><th className="p-3">Reason</th><th className="p-3"></th></tr></thead>
+                            <thead><tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-800"><th className="p-3">Duel ID</th><th className="p-3">Reporter vs Reported</th><th className="p-3">Reason</th><th className="p-3"></th></tr></thead>
                             <tbody>
-                                {isLoading ? (<tr><td colSpan="6" className="text-center p-8">Loading...</td></tr>) 
+                                {isLoading ? (<tr><td colSpan="4" className="text-center p-8 text-gray-500">Loading...</td></tr>) 
                                 : disputes.length > 0 ? (disputes.map(d => (
-                                    <tr key={d.id} className="border-b border-gray-700 hover:bg-gray-800/50">
-                                        <td className="p-3">#{d.duel_id}</td><td className="p-3">{d.game_name}</td><td className="p-3 font-semibold text-green-400">{d.reporter_username}</td><td className="p-3 font-semibold text-red-400">{d.reported_username}</td>
+                                    <tr key={d.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                        <td className="p-3 font-mono text-gray-400">#{d.duel_id}</td>
+                                        <td className="p-3"><div className="font-semibold text-green-400">{d.reporter_username}</div><div className="text-xs text-gray-500">vs</div><div className="font-semibold text-red-400">{d.reported_username}</div></td>
                                         <td className="p-3 text-sm text-gray-300 max-w-xs truncate" title={d.reason}>{d.reason}</td>
                                         <td className="p-3 text-right"><button onClick={() => setSelectedDispute(d)} className="btn btn-primary !mt-0 !py-1 !px-3">Review</button></td>
                                     </tr>
-                                ))) : (<tr><td colSpan="6" className="text-center p-8 text-gray-500">No pending disputes.</td></tr>)}
+                                ))) : (<tr><td colSpan="4" className="text-center p-8 text-gray-500">No pending disputes.</td></tr>)}
                             </tbody>
                         </table>
                     </div>
@@ -138,8 +146,8 @@ const AdminDashboard = () => {
                     </div>
                     <div className="overflow-x-auto flex-grow">
                         <table className="w-full">
-                            <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">User</th><th className="p-3 text-center">Gems</th><th className="p-3 text-center">Status</th><th className="p-3"></th></tr></thead>
-                            <tbody>{isLoading ? (<tr><td colSpan="4" className="text-center p-8">Loading...</td></tr>) : (users.map(u => <UserRow key={u.id} user={u} onSelectUser={setSelectedUser} />))}</tbody>
+                            <thead><tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-800"><th className="p-3">User</th><th className="p-3 text-center">Gems</th><th className="p-3 text-center">Status</th><th className="p-3"></th></tr></thead>
+                            <tbody>{isLoading ? (<tr><td colSpan="4" className="text-center p-8 text-gray-500">Loading...</td></tr>) : (users.map(u => <UserRow key={u.id} user={u} onSelectUser={setSelectedUser} />))}</tbody>
                         </table>
                     </div>
                 </div>
