@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import * as api from '../../../services/api';
+import DisabledOverlay from '../../../components/DisabledOverlay';
 
 const RivalsLinkPage = () => {
-    const { token, gameProfiles, fullRefresh } = useAuth();
+    const { token, gameProfiles, fullRefresh, systemStatus } = useAuth();
     const navigate = useNavigate();
     const [robloxUsername, setRobloxUsername] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +14,7 @@ const RivalsLinkPage = () => {
 
     const rivalsProfile = gameProfiles?.rivals;
     const verificationPhrase = rivalsProfile?.verification_phrase;
+    const linkingStatus = systemStatus?.linking_rivals;
 
     useEffect(() => {
         if (!rivalsProfile) {
@@ -50,7 +52,8 @@ const RivalsLinkPage = () => {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-900">
-            <div className="w-full max-w-lg p-8 space-y-6 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center">
+            <div className="w-full max-w-lg p-8 space-y-6 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center relative">
+                {!linkingStatus?.isEnabled && <DisabledOverlay message={linkingStatus?.message} />}
                 <h1 className="text-3xl font-bold text-white">Link Your Roblox Account</h1>
                 <p className="text-gray-400">To play games on our platform, you must first verify ownership of your Roblox account.</p>
                 
@@ -69,9 +72,9 @@ const RivalsLinkPage = () => {
                 <form onSubmit={handleVerify}>
                     <div className="mb-4 text-left">
                         <label className="block text-sm font-medium text-gray-300 mb-1">Your Roblox Username</label>
-                        <input type="text" value={robloxUsername} onChange={e => setRobloxUsername(e.target.value)} required className="form-input" placeholder="Enter your Roblox username..." />
+                        <input type="text" value={robloxUsername} onChange={e => setRobloxUsername(e.target.value)} required className="form-input" placeholder="Enter your Roblox username..." disabled={!linkingStatus?.isEnabled} />
                     </div>
-                    <button type="submit" disabled={isLoading || !verificationPhrase} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
+                    <button type="submit" disabled={isLoading || !verificationPhrase || !linkingStatus?.isEnabled} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
                         {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Verify & Link Account'}
                     </button>
                 </form>
