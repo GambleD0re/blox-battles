@@ -27,8 +27,7 @@ style.innerHTML = `
         --btn-secondary-hover-bg: #484f58;
     }
     html {
-        /* [FIXED] Scaled UI up slightly for better readability on standard screens. */
-        font-size: 100%; /* 15px base */
+        font-size: 100%;
     }
     html, body, #root {
         height: 100%;
@@ -75,6 +74,7 @@ style.innerHTML = `
     .pos-slot1 { left: calc(100% - 40rem - 1rem); }
     .pos-enter { left: 100%; }
     .pos-exit { left: -40rem; }
+    .dashboard-grid { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr)); }
 `;
 document.head.appendChild(style);
 
