@@ -53,7 +53,7 @@ export const resetPassword = (token, password) => apiRequest('/auth/reset-passwo
 
 // --- Core User Routes ---
 export const getCoreUserData = (token) => apiRequest('/user-data', 'GET', null, token);
-export const setUsername = (username, token) => apiRequest('/user/set-username', 'POST', { username }, token);
+export const setUsername = (username, birthDate, token) => apiRequest('/user/set-username', 'POST', { username, birthDate }, token);
 export const updatePassword = (passwordData, token) => apiRequest('/user/password', 'PUT', passwordData, token);
 export const unlinkDiscord = (token) => apiRequest('/user/unlink/discord', 'POST', null, token);
 export const deleteAccount = (password, token) => apiRequest('/user/delete/account', 'DELETE', { password }, token);
