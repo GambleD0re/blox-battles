@@ -30,11 +30,12 @@ router.get('/user-data', authenticateToken, async (req, res) => {
 
 router.post('/user/set-username', authenticateToken,
     [
-        body('username').trim().isLength({ min: 3, max: 20 }).withMessage('Username must be between 3 and 20 characters.').matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores.')
+        body('username').trim().isLength({ min: 3, max: 20 }).withMessage('Username must be between 3 and 20 characters.').matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores.'),
+        body('birthDate').isISO8601().toDate().withMessage('A valid date of birth is required.')
     ],
     handleValidationErrors,
     async (req, res) => {
-        const { username } = req.body;
+        const { username, birthDate } = req.body;
         const userId = req.user.userId;
         const client = await db.getPool().connect();
         try {
@@ -45,6 +46,14 @@ router.post('/user/set-username', authenticateToken,
                 await client.query('ROLLBACK');
                 return res.status(400).json({ message: 'Username has already been set.' });
             }
+            
+            const today = new Date();
+            const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+            if (birthDate > eighteenYearsAgo) {
+                await client.query('DELETE FROM users WHERE id = $1', [userId]);
+                await client.query('COMMIT');
+                return res.status(403).json({ message: 'You must be 18 or older to use this service. Your account has been deleted.' });
+            }
 
             const { rows: [existingUser] } = await client.query('SELECT id FROM users WHERE username ILIKE $1', [username]);
             if (existingUser) {
@@ -52,7 +61,7 @@ router.post('/user/set-username', authenticateToken,
                 return res.status(409).json({ message: 'This username is already taken.' });
             }
 
-            await client.query('UPDATE users SET username = $1, is_username_set = TRUE WHERE id = $2', [username, userId]);
+            await client.query('UPDATE users SET username = $1, is_username_set = TRUE, birth_date = $2 WHERE id = $3', [username, birthDate, userId]);
             
             const payload = {
                 userId: user.id,
