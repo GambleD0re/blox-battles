@@ -46,7 +46,8 @@ CREATE TABLE users (
     email_verification_token TEXT,
     password_reset_token TEXT,
     password_reset_expires TIMESTAMP WITH TIME ZONE,
-    last_queue_leave_at TIMESTAMP WITH TIME ZONE
+    last_queue_leave_at TIMESTAMP WITH TIME ZONE,
+    birth_date DATE
 );
 
 -- Table linking users to games and storing their game-specific profiles and stats.
@@ -279,7 +280,7 @@ INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 ('site_wide_maintenance', TRUE, 'The platform is currently down for scheduled maintenance. Please check back later.'),
 ('user_registration', TRUE, 'New user registrations are temporarily disabled.'),
 ('deposits_cards', TRUE, 'Credit & Debit Card deposits are temporarily disabled.'),
-('deposits_xsolla', FALSE, 'Alternative payment methods are temporarily disabled.'),
+('deposits_xsolla', FALSE, 'Alternative payment methods are temporarily unavailable.'),
 ('deposits_crypto', TRUE, 'Cryptocurrency deposits are temporarily disabled.'),
 ('withdrawals_crypto', TRUE, 'Cryptocurrency withdrawals are temporarily disabled.'),
 ('linking_rivals', TRUE, 'Linking new Roblox accounts is temporarily disabled.'),
