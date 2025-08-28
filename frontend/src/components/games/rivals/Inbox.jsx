@@ -79,7 +79,7 @@ const Inbox = ({ notifications, onStartDuel, onViewDuel, onConfirmWithdrawal, on
     return (
         <div className="widget flex-grow flex flex-col">
             <h2 className="widget-title flex-shrink-0">Dashboard Inbox</h2>
-            <div className="space-y-3 overflow-y-auto">
+            <div className="flex-grow space-y-3 overflow-y-auto">
                 {notifications && notifications.length > 0 ? (
                     notifications.map(renderNotification)
                 ) : (
