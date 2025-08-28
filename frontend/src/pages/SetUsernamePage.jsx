@@ -18,9 +18,33 @@ const SetUsernamePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        const parts = birthDate.split('/');
+        if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4) {
+            setError('Please enter your date of birth in MM/DD/YYYY format.');
+            return;
+        }
+
+        const [month, day, year] = parts.map(p => parseInt(p, 10));
+        const dob = new Date(year, month - 1, day);
+
+        if (dob.getFullYear() !== year || dob.getMonth() !== month - 1 || dob.getDate() !== day) {
+            setError('Please enter a valid date.');
+            return;
+        }
+
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        if (dob > eighteenYearsAgo) {
+            setError('You must be 18 or older to use this service.');
+            return;
+        }
+        
+        const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
         setIsLoading(true);
         try {
-            const data = await api.setUsername(username, birthDate, token);
+            const data = await api.setUsername(username, formattedDate, token);
             await login(data.token);
             navigate('/dashboard');
         } catch (err) {
@@ -68,12 +92,12 @@ const SetUsernamePage = () => {
                         <label htmlFor="birthDate" className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
                         <input 
                             id="birthDate" 
-                            type="date" 
+                            type="text" 
                             value={birthDate} 
                             onChange={e => setBirthDate(e.target.value)} 
                             required 
                             className="form-input"
-                            max={new Date().toISOString().split("T")[0]}
+                            placeholder="MM/DD/YYYY"
                             disabled={!registrationStatus?.isEnabled}
                         />
                          <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
