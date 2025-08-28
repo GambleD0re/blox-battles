@@ -95,7 +95,7 @@ const LiveFeed = ({ token, onMatchFound, onInboxRefresh }) => {
                 </button>
             </div>
             <div className="h-24 bg-black/60 backdrop-blur-md border-t-2 border-gray-800">
-                <div className="max-w-screen-2xl mx-auto h-full flex items-center overflow-hidden px-4 sm:px-6 lg:px-8">
+                <div className="max-w-screen-2xl mx-auto h-full flex items-center overflow-hidden">
                     <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-purple-400 font-black text-xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>LIVE</span></div>
                     <div className="flex-grow h-full"><div className="live-feed-cards-container">{duels.map(d => <div key={d.key} className={`duel-card-wrapper pos-${d.position}`}><DuelCard duel={d.data} /></div>)}</div></div>
                     <div className="flex-shrink-0 w-12 flex items-center justify-center"><span className="text-yellow-300 font-black text-xl tracking-tighter" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>FEED</span></div>
