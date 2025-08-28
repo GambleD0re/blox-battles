@@ -14,9 +14,7 @@ const DiscordLinkNotification = ({ notification, onRespond }) => (
             <p className="text-sm text-gray-400">Link your account to <span className="font-bold text-gray-300">{notification.data.message}</span>?</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-            {/* [FIXED] Changed notification.data.id to notification.id */}
             <button onClick={() => onRespond(notification.id, 'decline')} className="btn btn-danger !py-1 !px-3 !text-sm !mt-0">Decline</button>
-            {/* [FIXED] Changed notification.data.id to notification.id */}
             <button onClick={() => onRespond(notification.id, 'confirm')} className="btn btn-primary !py-1 !px-3 !text-sm !mt-0">Confirm</button>
         </div>
     </NotificationItem>
@@ -52,7 +50,7 @@ const MainInbox = ({ notifications, onRespondToLink, onCancelWithdrawal }) => {
     return (
         <div className="widget flex flex-col">
             <h2 className="widget-title flex-shrink-0">Dashboard Inbox</h2>
-            <div className="space-y-2 overflow-y-auto">
+            <div className="flex-grow space-y-2 overflow-y-auto">
                 {actionableNotifications.length > 0 ? (
                     actionableNotifications.map(renderNotification)
                 ) : (
