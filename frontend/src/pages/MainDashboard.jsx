@@ -95,7 +95,7 @@ const MainDashboard = () => {
             
             <PlayerHeader user={user} onMenuClick={() => setIsMenuOpen(true)} />
 
-            <main className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <main className="mt-8 grid grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] gap-8">
                 <div className="widget">
                     <h2 className="widget-title">Discover Games</h2>
                     {isLoading ? (
