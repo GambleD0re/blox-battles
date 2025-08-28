@@ -68,7 +68,6 @@ const MainDashboard = () => {
 
     const handleRespondToLink = async (messageId, response) => {
         try {
-            // [FIXED] This now passes the correct string ID (e.g., "message-123")
             const result = await api.respondToDiscordLink(messageId, response, token);
             showMessage(result.message, 'success');
             await fullRefresh();
@@ -96,7 +95,7 @@ const MainDashboard = () => {
             
             <PlayerHeader user={user} onMenuClick={() => setIsMenuOpen(true)} />
 
-            <main className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <main className="dashboard-grid mt-8">
                 <div className="widget">
                     <h2 className="widget-title">Discover Games</h2>
                     {isLoading ? (
