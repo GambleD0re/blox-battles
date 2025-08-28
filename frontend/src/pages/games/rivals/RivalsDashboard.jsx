@@ -192,7 +192,7 @@ const RivalsDashboard = () => {
             
             <RivalsPlayerHeader user={user} rivalsProfile={rivalsProfile} onMenuClick={() => setIsMenuOpen(true)} />
 
-            <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 items-stretch">
                 <div className="space-y-6">
                     <ChallengePlayer 
                         token={token} 
