@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import UserActionsModal from '../components/Admin/UserActionsModal';
-import { ConfirmationModal, TranscriptModal } from '../components/Dashboard/Modals';
+import { TranscriptModal } from '../components/Dashboard/Modals';
+import { AdminPayoutDetailModal, DeclineModal } from '../components/Admin/AdminPayoutModals';
 
 const StatCard = ({ title, value, icon }) => (
     <div className="widget flex items-center p-4 gap-4">
@@ -106,39 +107,41 @@ const AdminDashboard = () => {
                 <StatCard title="Pending Payouts" value={stats.pendingPayouts} icon="💸" />
             </div>
 
-            <div className="widget mb-8">
-                <h2 className="widget-title">Pending Disputes</h2>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">Duel ID</th><th className="p-3">Game</th><th className="p-3">Reporter</th><th className="p-3">Reported</th><th className="p-3">Reason</th><th className="p-3"></th></tr></thead>
-                        <tbody>
-                            {isLoading ? (<tr><td colSpan="6" className="text-center p-8">Loading...</td></tr>) 
-                            : disputes.length > 0 ? (disputes.map(d => (
-                                <tr key={d.id} className="border-b border-gray-700 hover:bg-gray-800/50">
-                                    <td className="p-3">#{d.duel_id}</td><td className="p-3">{d.game_name}</td><td className="p-3 font-semibold text-green-400">{d.reporter_username}</td><td className="p-3 font-semibold text-red-400">{d.reported_username}</td>
-                                    <td className="p-3 text-sm text-gray-300 max-w-xs truncate" title={d.reason}>{d.reason}</td>
-                                    <td className="p-3 text-right"><button onClick={() => setSelectedDispute(d)} className="btn btn-primary !mt-0 !py-1 !px-3">Review</button></td>
-                                </tr>
-                            ))) : (<tr><td colSpan="6" className="text-center p-8 text-gray-500">No pending disputes.</td></tr>)}
-                        </tbody>
-                    </table>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-stretch">
+                <div className="widget flex flex-col">
+                    <h2 className="widget-title flex-shrink-0">Pending Disputes</h2>
+                    <div className="overflow-x-auto flex-grow">
+                        <table className="w-full">
+                            <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">Duel ID</th><th className="p-3">Game</th><th className="p-3">Reporter</th><th className="p-3">Reported</th><th className="p-3">Reason</th><th className="p-3"></th></tr></thead>
+                            <tbody>
+                                {isLoading ? (<tr><td colSpan="6" className="text-center p-8">Loading...</td></tr>) 
+                                : disputes.length > 0 ? (disputes.map(d => (
+                                    <tr key={d.id} className="border-b border-gray-700 hover:bg-gray-800/50">
+                                        <td className="p-3">#{d.duel_id}</td><td className="p-3">{d.game_name}</td><td className="p-3 font-semibold text-green-400">{d.reporter_username}</td><td className="p-3 font-semibold text-red-400">{d.reported_username}</td>
+                                        <td className="p-3 text-sm text-gray-300 max-w-xs truncate" title={d.reason}>{d.reason}</td>
+                                        <td className="p-3 text-right"><button onClick={() => setSelectedDispute(d)} className="btn btn-primary !mt-0 !py-1 !px-3">Review</button></td>
+                                    </tr>
+                                ))) : (<tr><td colSpan="6" className="text-center p-8 text-gray-500">No pending disputes.</td></tr>)}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            <div className="widget">
-                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="widget-title !mb-0">User Management</h2>
-                    <form onSubmit={(e) => { e.preventDefault(); fetchData(); }} className="flex gap-2">
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-input !w-32"><option value="">All</option><option value="active">Active</option><option value="banned">Banned</option><option value="terminated">Terminated</option></select>
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="form-input !w-60" />
-                        <button type="submit" className="btn btn-primary !mt-0">Search</button>
-                    </form>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">User</th><th className="p-3 text-center">Gems</th><th className="p-3 text-center">Status</th><th className="p-3"></th></tr></thead>
-                        <tbody>{isLoading ? (<tr><td colSpan="4" className="text-center p-8">Loading...</td></tr>) : (users.map(u => <UserRow key={u.id} user={u} onSelectUser={setSelectedUser} />))}</tbody>
-                    </table>
+                <div className="widget flex flex-col">
+                    <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                        <h2 className="widget-title !mb-0">User Management</h2>
+                        <form onSubmit={(e) => { e.preventDefault(); fetchData(); }} className="flex gap-2">
+                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-input !w-32"><option value="">All</option><option value="active">Active</option><option value="banned">Banned</option><option value="terminated">Terminated</option></select>
+                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="form-input !w-60" />
+                            <button type="submit" className="btn btn-primary !mt-0">Search</button>
+                        </form>
+                    </div>
+                    <div className="overflow-x-auto flex-grow">
+                        <table className="w-full">
+                            <thead><tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-700"><th className="p-3">User</th><th className="p-3 text-center">Gems</th><th className="p-3 text-center">Status</th><th className="p-3"></th></tr></thead>
+                            <tbody>{isLoading ? (<tr><td colSpan="4" className="text-center p-8">Loading...</td></tr>) : (users.map(u => <UserRow key={u.id} user={u} onSelectUser={setSelectedUser} />))}</tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
