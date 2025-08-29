@@ -21,12 +21,20 @@ module.exports = {
                     await interaction.reply({ content: errorMessage, ephemeral: true });
                 }
             }
+        } else if (interaction.isAutocomplete()) {
+            const command = interaction.client.commands.get(interaction.commandName);
+            if (!command || !command.autocomplete) return;
+            try {
+                await command.autocomplete(interaction);
+            } catch (error) {
+                console.error(`Error executing autocomplete for ${interaction.commandName}`, error);
+            }
         } else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'ticket_type_select') {
                 const ticketType = interaction.values[0];
                 const modal = new ModalBuilder()
                     .setCustomId(`ticket_creation_modal_${ticketType}`)
-                    .setTitle(`Create a ${ticketType === 'support' ? 'Support' : 'Ban Appeal'} Ticket`);
+                    .setTitle(`Create a ${ticketType} Ticket`);
                 
                 const subjectInput = new TextInputBuilder().setCustomId('ticket_subject_input').setLabel("Subject").setStyle(TextInputStyle.Short).setRequired(true);
                 const descriptionInput = new TextInputBuilder().setCustomId('ticket_description_input').setLabel("Please describe your issue in detail").setStyle(TextInputStyle.Paragraph).setRequired(true);
@@ -37,7 +45,7 @@ module.exports = {
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('ticket_creation_modal_')) {
                 await interaction.deferReply({ ephemeral: true });
-                const ticketType = interaction.customId.split('_')[3];
+                const ticketType = interaction.customId.replace('ticket_creation_modal_', '');
                 const subject = interaction.fields.getTextInputValue('ticket_subject_input');
                 const description = interaction.fields.getTextInputValue('ticket_description_input');
                 try {
@@ -95,7 +103,6 @@ module.exports = {
                 if (subAction === 'claim') {
                     await interaction.deferUpdate();
                     
-                    // [NEW] Rename channel and re-sort category
                     const channel = interaction.channel;
                     if (channel.name.startsWith('U-')) {
                         const newName = channel.name.replace(/^U-/, 'C-');
@@ -115,7 +122,6 @@ module.exports = {
                                 await interaction.guild.channels.setPositions(positionUpdates);
                             } catch (sortError) {
                                 console.error("Could not re-sort ticket channels:", sortError);
-                                // Don't block the rest of the flow if sorting fails
                             }
                         }
                     }
