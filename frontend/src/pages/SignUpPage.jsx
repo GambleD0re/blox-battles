@@ -11,11 +11,11 @@ const GoogleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heig
 
 const SignUpPage = () => {
     const { systemStatus } = useAuth();
-    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
+    const [birthDate, setBirthDate] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [birthDate, setBirthDate] = useState('');
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -58,13 +58,13 @@ const SignUpPage = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
                         <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} disabled={!isRegistrationEnabled} />
                         <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
