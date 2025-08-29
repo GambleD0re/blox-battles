@@ -11,11 +11,11 @@ const GoogleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heig
 
 const SignUpPage = () => {
     const { systemStatus } = useAuth();
-    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
+    const [birthDate, setBirthDate] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [birthDate, setBirthDate] = useState('');
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -59,25 +59,25 @@ const SignUpPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
-                        <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} disabled={!isRegistrationEnabled} />
+                        <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} />
                         <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!isRegistrationEnabled} />
+                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!isRegistrationEnabled} />
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" placeholder="••••••••" />
                         <p className="text-xs text-gray-500 mt-1">8+ characters with a number & special character.</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
-                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!isRegistrationEnabled} />
+                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="form-input" placeholder="••••••••" />
                     </div>
 
                     <div className="form-group !mb-2">
@@ -89,7 +89,6 @@ const SignUpPage = () => {
                                 onChange={(e) => setAgreedToTerms(e.target.checked)}
                                 required
                                 className="mt-1 h-4 w-4 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                                disabled={!isRegistrationEnabled}
                             />
                             <span className="text-sm text-gray-400">
                                 I have read and agree to the{' '}
@@ -116,4 +115,4 @@ const SignUpPage = () => {
     );
 };
 
-export default SignUpPage;
+export default SignUpPage;```
