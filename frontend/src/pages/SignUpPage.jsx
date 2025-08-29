@@ -15,6 +15,7 @@ const SignUpPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [birthDate, setBirthDate] = useState('');
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -37,7 +38,7 @@ const SignUpPage = () => {
         }
         setIsLoading(true);
         try {
-            await api.registerUser({ username, email, password });
+            await api.registerUser({ username, email, password, birthDate });
             navigate('/verification-notice', { state: { email } });
         } catch (err) {
             setError(err.message);
@@ -47,15 +48,15 @@ const SignUpPage = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-900">
-            <div className="w-full max-w-md p-8 space-y-8 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center relative">
+        <div className="flex items-center justify-center min-h-screen bg-gray-900 py-12">
+            <div className="w-full max-w-md p-8 space-y-6 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center relative">
                 {isStatusReady && !isRegistrationEnabled && <DisabledOverlay message={registrationStatus?.message} />}
                 <h1 className="text-4xl font-black text-white">Create Account</h1>
                 <p className="text-gray-400">Join the arena and start dueling.</p>
                 
                 {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg">{error}</div>}
 
-                <form onSubmit={handleSubmit} className="space-y-6 text-left">
+                <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
                         <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!isRegistrationEnabled} />
@@ -63,6 +64,11 @@ const SignUpPage = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
+                        <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} disabled={!isRegistrationEnabled} />
+                        <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
@@ -98,11 +104,11 @@ const SignUpPage = () => {
                     </button>
                 </form>
 
-                <div className="my-6 flex items-center"><div className="flex-grow border-t border-gray-600"></div><span className="flex-shrink mx-4 text-gray-400">OR</span><div className="flex-grow border-t border-gray-600"></div></div>
+                <div className="my-4 flex items-center"><div className="flex-grow border-t border-gray-600"></div><span className="flex-shrink mx-4 text-gray-400">OR</span><div className="flex-grow border-t border-gray-600"></div></div>
                 <a href={GOOGLE_AUTH_URL} className={`w-full flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-lg transition ${!isRegistrationEnabled ? 'pointer-events-none opacity-50' : ''}`}>
                     <GoogleIcon /> Sign up with Google
                 </a>
-                <p className="mt-8 text-sm text-gray-400">
+                <p className="mt-6 text-sm text-gray-400">
                     Already have an account? <Link to="/signin" className="font-medium text-[var(--accent-color)] hover:underline">Sign in</Link>
                 </p>
             </div>
