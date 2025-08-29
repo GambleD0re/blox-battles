@@ -11,11 +11,11 @@ const GoogleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heig
 
 const SignUpPage = () => {
     const { systemStatus } = useAuth();
-    const [email, setEmail] = useState('');
-    const [birthDate, setBirthDate] = useState('');
     const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [birthDate, setBirthDate] = useState('');
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
