@@ -1,5 +1,5 @@
 // discord-bot/core/commands/ticket.js
-const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { apiClient } = require('../utils/apiClient');
 
 module.exports = {
@@ -10,26 +10,28 @@ module.exports = {
         try {
             await interaction.deferReply({ ephemeral: true });
             
-            // Use the valid user-profile endpoint to get user status
-            const { data } = await apiClient.get(`/discord/user-profile/${interaction.user.id}`);
-            const user = data.user;
-
-            const isBanned = user.status === 'banned';
-            const selectMenuOptions = [
-                new StringSelectMenuOptionBuilder().setLabel('Support Request').setValue('support').setDescription('For billing, technical issues, or other questions.')
-            ];
+            const { data: ticketTypes } = await apiClient.get('/ticket-types');
             
-            if (isBanned) {
-                selectMenuOptions.unshift(new StringSelectMenuOptionBuilder().setLabel('Ban Appeal').setValue('ban_appeal').setDescription('Appeal a temporary or permanent ban.'));
+            if (!ticketTypes || ticketTypes.length === 0) {
+                return interaction.editReply({ content: 'The ticket system is currently unavailable. Please try again later.' });
             }
 
-            const ticketTypeSelect = new StringSelectMenuBuilder().setCustomId('ticket_type_select').setPlaceholder('Select the reason for your ticket').addOptions(selectMenuOptions);
+            const selectMenuOptions = ticketTypes.map(type => ({
+                label: type.name,
+                value: type.name,
+                description: `For issues related to ${type.name.toLowerCase()}.`
+            }));
+
+            const ticketTypeSelect = new StringSelectMenuBuilder()
+                .setCustomId('ticket_type_select')
+                .setPlaceholder('Select the reason for your ticket')
+                .addOptions(selectMenuOptions);
+            
             const row = new ActionRowBuilder().addComponents(ticketTypeSelect);
 
             await interaction.editReply({ content: 'Please select the type of ticket you wish to create.', components: [row] });
 
         } catch (error) {
-            // This catch block will now correctly handle users who haven't linked their account (API returns 404)
             const errorMessage = error.response?.status === 404 
                 ? 'You must link your Blox Battles account before creating a ticket. Please use the `/link` command first.'
                 : error.response?.data?.message || 'An error occurred during the ticket process.';
