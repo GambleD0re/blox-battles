@@ -300,9 +300,9 @@ INSERT INTO games (id, name, description, icon_url, is_active) VALUES
 ('rivals', 'Roblox Rivals', 'The classic 1v1 dueling experience.', '/game-icons/rivals.png', TRUE);
 
 INSERT INTO ticket_types (name, category_id, is_deletable) VALUES
-('Support', '1410068326863994954', FALSE),
-('Ban Appeal', '1410068333704908862', FALSE),
-('Duel Dispute', '1410068340134777035', FALSE);
+('Support', SUPPORT_TICKETS_CATEGORY_ID, FALSE),
+('Ban Appeal', DUEL_DISPUTES_CATEGORY_ID, FALSE),
+('Duel Dispute', BAN_APPEALS_CATEGORY_ID, FALSE);
 
 CREATE INDEX idx_duels_status_created_at ON duels(status, created_at);
 CREATE INDEX idx_duels_participants ON duels(challenger_id, opponent_id);
