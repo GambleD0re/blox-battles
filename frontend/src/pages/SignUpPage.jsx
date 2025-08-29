@@ -58,17 +58,17 @@ const SignUpPage = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-left">
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!isRegistrationEnabled} />
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
+                        <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} disabled={!isRegistrationEnabled} />
+                        <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Date of Birth</label>
-                        <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} required className="form-input" max={new Date().toISOString().split("T")[0]} disabled={!isRegistrationEnabled} />
-                        <p className="text-xs text-gray-500 mt-1">You must be 18 or older to use this service.</p>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!isRegistrationEnabled} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
