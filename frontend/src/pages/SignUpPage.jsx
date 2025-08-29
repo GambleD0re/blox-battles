@@ -98,7 +98,7 @@ const SignUpPage = () => {
                         </label>
                     </div>
                     
-                    <button type="submit" disabled={isLoading || !agreedToTerms || !isRegistrationEnabled} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
+                    <button type="submit" disabled={isLoading || !agreedToTerms || !isStatusReady || !isRegistrationEnabled} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
                         {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Account'}
                     </button>
                 </form>
