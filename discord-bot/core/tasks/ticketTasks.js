@@ -3,10 +3,10 @@ const { ChannelType, PermissionsBitField, EmbedBuilder, ActionRowBuilder, Button
 const { apiClient } = require('../utils/apiClient');
 const { generateTranscript } = require('../utils/transcriptGenerator');
 
-const { SUPPORT_STAFF_ROLE_ID, SUPPORT_TICKETS_CATEGORY_ID, FRONTEND_URL } = process.env;
+const { SUPPORT_STAFF_ROLE_ID, FRONTEND_URL } = process.env;
 
 async function handleCreateTicketChannel(client, task) {
-    const { ticket_id, user_discord_id, ticket_type, subject, description } = task.payload;
+    const { ticket_id, user_discord_id, ticket_type, subject, description, categoryId } = task.payload;
 
     const guild = client.guilds.cache.first();
     if (!guild) throw new Error("Bot is not in any guild.");
@@ -14,10 +14,9 @@ async function handleCreateTicketChannel(client, task) {
     const user = await guild.members.fetch(user_discord_id).catch(() => null);
     if (!user) throw new Error(`User with Discord ID ${user_discord_id} not found.`);
 
-    const categoryChannel = guild.channels.cache.get(SUPPORT_TICKETS_CATEGORY_ID);
-    if (!categoryChannel) throw new Error(`Support category with ID ${SUPPORT_TICKETS_CATEGORY_ID} not found.`);
+    const categoryChannel = guild.channels.cache.get(categoryId);
+    if (!categoryChannel) throw new Error(`Category with ID ${categoryId} for ticket type "${ticket_type}" not found.`);
 
-    // [MODIFIED] Changed channel naming convention to use a "U-" prefix for "Unclaimed".
     const channelName = `U-${user.user.username}-${ticket_id.substring(0, 4)}`;
     
     const permissionOverwrites = [
