@@ -21,6 +21,8 @@ const SignUpPage = () => {
     const navigate = useNavigate();
 
     const registrationStatus = systemStatus?.user_registration;
+    const isRegistrationEnabled = registrationStatus?.isEnabled ?? false;
+    const isStatusReady = systemStatus !== null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -47,7 +49,7 @@ const SignUpPage = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-900">
             <div className="w-full max-w-md p-8 space-y-8 bg-[var(--widget-bg)] rounded-xl shadow-lg border border-[var(--widget-border)] text-center relative">
-                {!registrationStatus?.isEnabled && <DisabledOverlay message={registrationStatus?.message} />}
+                {isStatusReady && !isRegistrationEnabled && <DisabledOverlay message={registrationStatus?.message} />}
                 <h1 className="text-4xl font-black text-white">Create Account</h1>
                 <p className="text-gray-400">Join the arena and start dueling.</p>
                 
@@ -56,20 +58,20 @@ const SignUpPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-6 text-left">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!registrationStatus?.isEnabled} />
+                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" placeholder="Choose your Blox Battles username" disabled={!isRegistrationEnabled} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!registrationStatus?.isEnabled} />
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="you@example.com" disabled={!isRegistrationEnabled} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!registrationStatus?.isEnabled} />
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!isRegistrationEnabled} />
                         <p className="text-xs text-gray-500 mt-1">8+ characters with a number & special character.</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
-                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!registrationStatus?.isEnabled} />
+                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="form-input" placeholder="••••••••" disabled={!isRegistrationEnabled} />
                     </div>
 
                     <div className="form-group !mb-2">
@@ -81,7 +83,7 @@ const SignUpPage = () => {
                                 onChange={(e) => setAgreedToTerms(e.target.checked)}
                                 required
                                 className="mt-1 h-4 w-4 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                                disabled={!registrationStatus?.isEnabled}
+                                disabled={!isRegistrationEnabled}
                             />
                             <span className="text-sm text-gray-400">
                                 I have read and agree to the{' '}
@@ -91,13 +93,13 @@ const SignUpPage = () => {
                         </label>
                     </div>
                     
-                    <button type="submit" disabled={isLoading || !agreedToTerms || !registrationStatus?.isEnabled} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
+                    <button type="submit" disabled={isLoading || !agreedToTerms || !isRegistrationEnabled} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 flex items-center justify-center">
                         {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Account'}
                     </button>
                 </form>
 
                 <div className="my-6 flex items-center"><div className="flex-grow border-t border-gray-600"></div><span className="flex-shrink mx-4 text-gray-400">OR</span><div className="flex-grow border-t border-gray-600"></div></div>
-                <a href={GOOGLE_AUTH_URL} className={`w-full flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-lg transition ${!registrationStatus?.isEnabled ? 'pointer-events-none opacity-50' : ''}`}>
+                <a href={GOOGLE_AUTH_URL} className={`w-full flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-lg transition ${!isRegistrationEnabled ? 'pointer-events-none opacity-50' : ''}`}>
                     <GoogleIcon /> Sign up with Google
                 </a>
                 <p className="mt-8 text-sm text-gray-400">
