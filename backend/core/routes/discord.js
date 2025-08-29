@@ -40,7 +40,7 @@ router.post('/tickets',
     authenticateBot,
     [
         body('discordId').isString().notEmpty(),
-        body('type').isIn(['support', 'ban_appeal']),
+        body('type').isString().notEmpty(),
         body('subject').trim().notEmpty(),
         body('message').trim().notEmpty()
     ],
@@ -55,6 +55,12 @@ router.post('/tickets',
             if (!user) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ message: 'No Blox Battles account is linked to this Discord user.' });
+            }
+            
+            const { rows: [ticketType] } = await client.query('SELECT category_id FROM ticket_types WHERE name = $1', [type]);
+            if (!ticketType) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ message: 'Invalid ticket type specified.' });
             }
 
             const { rows: [newTicket] } = await client.query(
@@ -73,7 +79,8 @@ router.post('/tickets',
                 user_discord_id: discordId,
                 ticket_type: type,
                 subject: subject,
-                description: message
+                description: message,
+                categoryId: ticketType.category_id
             };
             await client.query("INSERT INTO tasks (task_type, payload) VALUES ('CREATE_TICKET_CHANNEL', $1)", [JSON.stringify(taskPayload)]);
             
