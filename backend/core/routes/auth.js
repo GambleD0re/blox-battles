@@ -21,11 +21,19 @@ router.post('/register',
             const validation = validatePassword(value);
             if (!validation.valid) throw new Error(validation.message);
             return true;
-        })
+        }),
+        body('birthDate').isISO8601().toDate().withMessage('A valid date of birth is required.')
     ],
     handleValidationErrors,
     async (req, res) => {
-        const { username, email, password } = req.body;
+        const { username, email, password, birthDate } = req.body;
+        
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        if (birthDate > eighteenYearsAgo) {
+            return res.status(403).json({ message: 'You must be 18 or older to use this service.' });
+        }
+        
         const client = await db.getPool().connect();
         try {
             await client.query('BEGIN');
@@ -47,8 +55,8 @@ router.post('/register',
             const verificationToken = crypto.randomBytes(32).toString('hex');
             
             await client.query(
-                'INSERT INTO users (id, username, email, password_hash, is_admin, email_verification_token, is_email_verified, is_username_set) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', 
-                [newUserId, username, email, hashedPassword, false, verificationToken, false, true]
+                'INSERT INTO users (id, username, email, password_hash, is_admin, email_verification_token, is_email_verified, is_username_set, birth_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', 
+                [newUserId, username, email, hashedPassword, false, verificationToken, false, true, birthDate]
             );
 
             await sendVerificationEmail(email, verificationToken);
