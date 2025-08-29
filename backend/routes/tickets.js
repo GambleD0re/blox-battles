@@ -26,10 +26,18 @@ router.post('/',
                 await client.query('ROLLBACK');
                 return res.status(400).json({ message: 'You must link your Discord account before creating a support ticket.' });
             }
+            
+            const ticketType = 'Support';
+            const { rows: [typeData] } = await client.query('SELECT category_id FROM ticket_types WHERE name = $1', [ticketType]);
+            if (!typeData || !typeData.category_id) {
+                await client.query('ROLLBACK');
+                console.error(`[FATAL] The core '${ticketType}' ticket type is not configured in the database.`);
+                return res.status(500).json({ message: 'Server configuration error: Support ticket system is unavailable.' });
+            }
 
             const { rows: [newTicket] } = await client.query(
-                `INSERT INTO tickets (user_id, type, subject) VALUES ($1, 'support', $2) RETURNING id`,
-                [userId, subject]
+                `INSERT INTO tickets (user_id, type, subject) VALUES ($1, $2, $3) RETURNING id`,
+                [userId, ticketType, subject]
             );
             const ticketId = newTicket.id;
 
@@ -41,8 +49,10 @@ router.post('/',
             const taskPayload = {
                 ticket_id: ticketId,
                 user_discord_id: user.discord_id,
-                ticket_type: 'support',
-                subject: subject
+                ticket_type: ticketType,
+                subject: subject,
+                description: message,
+                categoryId: typeData.category_id
             };
             await client.query("INSERT INTO tasks (task_type, payload) VALUES ('CREATE_TICKET_CHANNEL', $1)", [JSON.stringify(taskPayload)]);
             
