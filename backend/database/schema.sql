@@ -1,12 +1,19 @@
 -- backend/database/schema.sql
 -- Drop tables if they exist to ensure a clean slate. The CASCADE keyword will also drop dependent objects.
-DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, deposits, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries CASCADE;
+DROP TABLE IF EXISTS users, games, user_game_profiles, duels, tasks, game_servers, disputes, deposits, transaction_history, payout_requests, crypto_deposits, inbox_messages, tournaments, tournament_participants, tournament_matches, system_status, tickets, ticket_messages, ticket_transcripts, reaction_roles, random_queue_entries, ticket_types CASCADE;
 
 -- Table to manage the on/off status of site features.
 CREATE TABLE system_status (
     feature_name VARCHAR(50) PRIMARY KEY,
     is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     disabled_message TEXT
+);
+
+CREATE TABLE ticket_types (
+    name VARCHAR(50) PRIMARY KEY,
+    category_id VARCHAR(255) NOT NULL,
+    is_deletable BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table to define the games available on the platform.
@@ -185,7 +192,7 @@ CREATE TABLE disputes (
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL CHECK(type IN ('support', 'temp_ban_appeal', 'perm_ban_appeal', 'duel_dispute')),
+    type VARCHAR(50) NOT NULL REFERENCES ticket_types(name) ON UPDATE CASCADE,
     status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'in_progress', 'awaiting_user_reply', 'resolved', 'closed')),
     subject TEXT NOT NULL,
     reference_id TEXT,
@@ -291,6 +298,11 @@ INSERT INTO system_status (feature_name, is_enabled, disabled_message) VALUES
 
 INSERT INTO games (id, name, description, icon_url, is_active) VALUES
 ('rivals', 'Roblox Rivals', 'The classic 1v1 dueling experience.', '/game-icons/rivals.png', TRUE);
+
+INSERT INTO ticket_types (name, category_id, is_deletable) VALUES
+('Support', '1410068326863994954', FALSE),
+('Ban Appeal', '1410068333704908862', FALSE),
+('Duel Dispute', '1410068340134777035', FALSE);
 
 CREATE INDEX idx_duels_status_created_at ON duels(status, created_at);
 CREATE INDEX idx_duels_participants ON duels(challenger_id, opponent_id);
